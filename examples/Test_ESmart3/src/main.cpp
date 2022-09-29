@@ -21,14 +21,15 @@ void setup() {
     Serial.begin(115200);
 
 #if defined(ESP8266)
-    Serial2.begin(9600, SWSERIAL_8N1, 13, 15);  // Use pins 13 and 15 for RX and TX
+    Serial2.begin(9600, SWSERIAL_8N1, 13, 12);  // Use pins 13 and 12 for RX and TX
+    esmart3.begin(-1);  // No explicit DE/!RE
 #elif defined(ESP32)
     Serial2.begin(9600, SERIAL_8N1);  // Use Serial2 default pins 16 and 17 for RX and TX
+    esmart3.begin(22);  // Use pin 22 for explicit DE/!RE
 #else
     // init your non ESP serial port here
 #endif
 
-    esmart3.begin(22);  // Use pin 22 for explicit DE/!RE
     
     Serial.println("\nStart " PROGNAME " " VERSION );
 }
