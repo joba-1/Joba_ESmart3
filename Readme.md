@@ -9,7 +9,7 @@ A library to communicate with an eSmart3 MPPT solar charge controller or similar
    ```
    Serial2.begin(9600, SERIAL_8N1);
    ```
- * ESP8266 SoftwareSerial (not tested)
+ * ESP8266 SoftwareSerial
    ```
    SoftwareSerial port;
    ... 
