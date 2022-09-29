@@ -10,7 +10,10 @@ ESmart3 esmart3(Serial2);  // Use ESP32 HardwareSerial port Serial2 to commiunic
 
 void setup() {
     Serial.begin(115200);
-    esmart3.begin(-1, -1, 22);  // Use Serial2 default pins 16 and 17 for RX and TX and pin 22 for explicit DE/!RE
+
+    Serial2.begin(9600, SERIAL_8N1); // Use Serial2 default pins 16 and 17 for RX and TX
+    esmart3.begin(22);  // Use pin 22 for explicit DE/!RE
+    
     Serial.println("\nStart " PROGNAME " " VERSION );
 }
 

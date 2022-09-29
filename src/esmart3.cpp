@@ -16,17 +16,16 @@ void hex( const char *label, const uint8_t *data, size_t length ) {
 
 // Basic methods
 
-ESmart3::ESmart3( HardwareSerial &serial, uint8_t command_delay_ms ) 
+ESmart3::ESmart3( Stream &serial, uint8_t command_delay_ms ) 
     : _serial(serial), _delay(command_delay_ms), _prev(0), _dir_pin(-1) {
 }
 
-void ESmart3::begin( int rx_pin, int tx_pin, int dir_pin ) {
+void ESmart3::begin( int dir_pin ) {
     _dir_pin = dir_pin;
     if( _dir_pin >= 0 ) {
         pinMode(_dir_pin, OUTPUT);
         digitalWrite(_dir_pin, LOW);  // read mode (default)
     }
-    _serial.begin(9600, SERIAL_8N1, rx_pin, tx_pin);
 }
 
 bool ESmart3::execute( header_t &header, uint8_t *command, uint8_t *result ) {
