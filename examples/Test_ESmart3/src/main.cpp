@@ -6,11 +6,31 @@ Test Program for eSmart3 RS485 communication
 
 #include <esmart3.h>
 
+#if defined(ESP8266)
+#include <SoftwareSerial.h>
+SoftwareSerial Serial2;  // Use SoftwareSerial port
+#elif defined(ESP32)
+// Serial2 already defined
+#else
+// define Serial2 as your non ESP serial port here
+#endif
+
 ESmart3 esmart3(Serial2);  // Use ESP32 HardwareSerial port Serial2 to commiunicate with RS485 adapter
 
 void setup() {
     Serial.begin(115200);
-    esmart3.begin(-1, -1, 22);  // Use Serial2 default pins 16 and 17 for RX and TX and pin 22 for explicit DE/!RE
+
+#if defined(ESP8266)
+    Serial2.begin(9600, SWSERIAL_8N1, 13, 12);  // Use pins 13 and 12 for RX and TX
+    esmart3.begin(-1);  // No explicit DE/!RE
+#elif defined(ESP32)
+    Serial2.begin(9600, SERIAL_8N1);  // Use Serial2 default pins 16 and 17 for RX and TX
+    esmart3.begin(22);  // Use pin 22 for explicit DE/!RE
+#else
+    // init your non ESP serial port here
+#endif
+
+    
     Serial.println("\nStart " PROGNAME " " VERSION );
 }
 

@@ -41,7 +41,7 @@ License: GPL V2
 */
 
 #include <Arduino.h>
-#include <HardwareSerial.h>
+#include <Stream.h>
 #include <time.h>
 
 // Don't use padding in structures to match what ESmart3 devices need
@@ -235,10 +235,10 @@ public:
     // Basic methods
 
     // Object represents device at serial port. Send commands with minimal delay given 
-    ESmart3( HardwareSerial &serial, uint8_t command_delay_ms = 10 );
+    ESmart3( Stream &serial, uint8_t command_delay_ms = 10 );
 
     // Init serial interface. Set dir_pin to -1 if RS485 hardware sets direction automatically
-    void begin( int rx_pin = -1, int tx_pin = -1, int dir_pin = -1 );
+    void begin( int dir_pin = -1 );
 
     // Send header and command then receive header and result (not including offset or crc)
     // Return true if header and command are written and result and header are read successfully
@@ -295,7 +295,7 @@ private:
     uint8_t *initGetOffset( uint8_t *cmd, uint8_t *data, size_t start, size_t end );
     void initSetOffset( uint8_t *cmd, uint8_t *data, size_t start, size_t end );
 
-    HardwareSerial &_serial;
+    Stream &_serial;
     uint8_t _delay;
     uint32_t _prev;
     int _dir_pin;
