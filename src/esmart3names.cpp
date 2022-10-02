@@ -199,26 +199,26 @@ static const char *_EngSave[] = {
 #define _OFFSET_TO_STRING(strings, offset) offset < sizeof(strings)/sizeof(*strings) ? strings[offset] : (""))
 #define _OFFSET_TO_STRING(strings, offset) offset < sizeof(strings)/sizeof(*strings) ? strings[offset] : (""))
 
-const char *header( size_t byte_offset ) { return _OFFSET_TO_STRING(_header, byte_offset); }
-const char *dev( size_t byte_offset ) { return _OFFSET_TO_STRING(_dev, byte_offset); }
-const char *addr( size_t byte_offset ) { return _OFFSET_TO_STRING(_addr, byte_offset); }
-const char *cmd( size_t byte_offset ) { return _OFFSET_TO_STRING(_cmd, byte_offset); }
-const char *item( size_t byte_offset ) { return _OFFSET_TO_STRING(_item, byte_offset); }
-const char *chgMode( size_t byte_offset ) { return _OFFSET_TO_STRING(_chgMode, byte_offset); }
-const char *ChgSts( size_t word_offset ) { return _OFFSET_TO_STRING(_ChgSts, word_offset); }
-const char *BatParam( size_t word_offset ) { return _OFFSET_TO_STRING(_BatParam, word_offset); }
-const char *data( size_t word_offset ) { return _OFFSET_TO_STRING(_data, word_offset); }
-const char *Log( size_t word_offset ) { return _OFFSET_TO_STRING(_Log, word_offset); }
-const char *Parameters( size_t word_offset ) { return _OFFSET_TO_STRING(_Parameters, word_offset); }
-const char *time( size_t word_offset ) { return _OFFSET_TO_STRING(_time, word_offset); }
-const char *LoadParam( size_t word_offset ) { return _OFFSET_TO_STRING(_LoadParam, word_offset); }
-const char *RemoteControl( size_t word_offset ) { return _OFFSET_TO_STRING(_RemoteControl, word_offset); }
-const char *ProParam( size_t word_offset ) { return _OFFSET_TO_STRING(_ProParam, word_offset); }
-const char *Information( size_t word_offset ) { return _OFFSET_TO_STRING(_Information, word_offset); }
-const char *tempUnit( size_t word_offset ) { return _OFFSET_TO_STRING(_tempUnit, word_offset); }
-const char *TempParam( size_t word_offset ) { return _OFFSET_TO_STRING(_TempParam, word_offset); }
+const char *header_str( size_t byte_offset ) { return _OFFSET_TO_STRING(_header, byte_offset); }
+const char *dev_str( size_t byte_offset ) { return _OFFSET_TO_STRING(_dev, byte_offset); }
+const char *addr_str( size_t byte_offset ) { return _OFFSET_TO_STRING(_addr, byte_offset); }
+const char *cmd_str( size_t byte_offset ) { return _OFFSET_TO_STRING(_cmd, byte_offset); }
+const char *item_str( size_t byte_offset ) { return _OFFSET_TO_STRING(_item, byte_offset); }
+const char *chgMode_str( size_t byte_offset ) { return _OFFSET_TO_STRING(_chgMode, byte_offset); }
+const char *ChgSts_str( size_t word_offset ) { return _OFFSET_TO_STRING(_ChgSts, word_offset); }
+const char *BatParam_str( size_t word_offset ) { return _OFFSET_TO_STRING(_BatParam, word_offset); }
+const char *data_str( size_t word_offset ) { return _OFFSET_TO_STRING(_data, word_offset); }
+const char *Log_str( size_t word_offset ) { return _OFFSET_TO_STRING(_Log, word_offset); }
+const char *Parameters_str( size_t word_offset ) { return _OFFSET_TO_STRING(_Parameters, word_offset); }
+const char *time_str( size_t word_offset ) { return _OFFSET_TO_STRING(_time, word_offset); }
+const char *LoadParam_str( size_t word_offset ) { return _OFFSET_TO_STRING(_LoadParam, word_offset); }
+const char *RemoteControl_str( size_t word_offset ) { return _OFFSET_TO_STRING(_RemoteControl, word_offset); }
+const char *ProParam_str( size_t word_offset ) { return _OFFSET_TO_STRING(_ProParam, word_offset); }
+const char *Information_str( size_t word_offset ) { return _OFFSET_TO_STRING(_Information, word_offset); }
+const char *tempUnit_str( size_t word_offset ) { return _OFFSET_TO_STRING(_tempUnit, word_offset); }
+const char *TempParam_str( size_t word_offset ) { return _OFFSET_TO_STRING(_TempParam, word_offset); }
 
-const char *EngSave( size_t word_offset ) {
+const char *EngSave_str( size_t word_offset ) {
     switch( word_offset ) {
         case offsetof(EngSave_t, wFlag) / 2:
         case offsetof(EngSave_t, wMonthPower) / 2:
@@ -244,7 +244,7 @@ const char *EngSave( size_t word_offset ) {
 
 // Convert string to size_t struct offset or enum value
 // return -1 for errors)
-static size_t _to_str( const char *str, const char *strings[], size_t num_strings ) {
+static size_t _to_offset( const char *str, const char *strings[], size_t num_strings ) {
     if( !str || !*str ) {
         return (size_t)-1;
     }
@@ -258,27 +258,27 @@ static size_t _to_str( const char *str, const char *strings[], size_t num_string
 
 #define _ARRAY_AND_SIZE(arr) arr, sizeof(arr)/sizeof(*arr)
 
-size_t header_str( const char *str ) { return _to_str(str, _ARRAY_AND_SIZE(_header)); }
-size_t dev_str( const char *str ) { return _to_str(str, _ARRAY_AND_SIZE(_dev)); }
-size_t addr_str( const char *str ) { return _to_str(str, _ARRAY_AND_SIZE(_addr)); }
-size_t cmd_str( const char *str ) { return _to_str(str, _ARRAY_AND_SIZE(_cmd)); }
-size_t item_str( const char *str ) { return _to_str(str, _ARRAY_AND_SIZE(_item)); }
-size_t chgMode_str( const char *str ) { return _to_str(str, _ARRAY_AND_SIZE(_chgMode)); }
-size_t ChgSts_str( const char *str ) { return _to_str(str, _ARRAY_AND_SIZE(_ChgSts)); }
-size_t BatParam_str( const char *str ) { return _to_str(str, _ARRAY_AND_SIZE(_BatParam)); }
-size_t data_str( const char *str ) { return _to_str(str, _ARRAY_AND_SIZE(_data)); }
-size_t Log_str( const char *str ) { return _to_str(str, _ARRAY_AND_SIZE(_Log)); }
-size_t Parameters_str( const char *str ) { return _to_str(str, _ARRAY_AND_SIZE(_Parameters)); }
-size_t time_str( const char *str ) { return _to_str(str, _ARRAY_AND_SIZE(_time)); }
-size_t LoadParam_str( const char *str ) { return _to_str(str, _ARRAY_AND_SIZE(_LoadParam)); }
-size_t RemoteControl_str( const char *str ) { return _to_str(str, _ARRAY_AND_SIZE(_RemoteControl)); }
-size_t ProParam_str( const char *str ) { return _to_str(str, _ARRAY_AND_SIZE(_ProParam)); }
-size_t Information_str( const char *str ) { return _to_str(str, _ARRAY_AND_SIZE(_Information)); }
-size_t tempUnit_str( const char *str ) { return _to_str(str, _ARRAY_AND_SIZE(_tempUnit)); }
-size_t TempParam_str( const char *str ) { return _to_str(str, _ARRAY_AND_SIZE(_TempParam)); }
+size_t header_offset( const char *str ) { return _to_offset(str, _ARRAY_AND_SIZE(_header)); }
+size_t dev_offset( const char *str ) { return _to_offset(str, _ARRAY_AND_SIZE(_dev)); }
+size_t addr_offset( const char *str ) { return _to_offset(str, _ARRAY_AND_SIZE(_addr)); }
+size_t cmd_offset( const char *str ) { return _to_offset(str, _ARRAY_AND_SIZE(_cmd)); }
+size_t item_offset( const char *str ) { return _to_offset(str, _ARRAY_AND_SIZE(_item)); }
+size_t chgMode_offset( const char *str ) { return _to_offset(str, _ARRAY_AND_SIZE(_chgMode)); }
+size_t ChgSts_offset( const char *str ) { return _to_offset(str, _ARRAY_AND_SIZE(_ChgSts)); }
+size_t BatParam_offset( const char *str ) { return _to_offset(str, _ARRAY_AND_SIZE(_BatParam)); }
+size_t data_offset( const char *str ) { return _to_offset(str, _ARRAY_AND_SIZE(_data)); }
+size_t Log_offset( const char *str ) { return _to_offset(str, _ARRAY_AND_SIZE(_Log)); }
+size_t Parameters_offset( const char *str ) { return _to_offset(str, _ARRAY_AND_SIZE(_Parameters)); }
+size_t time_offset( const char *str ) { return _to_offset(str, _ARRAY_AND_SIZE(_time)); }
+size_t LoadParam_offset( const char *str ) { return _to_offset(str, _ARRAY_AND_SIZE(_LoadParam)); }
+size_t RemoteControl_offset( const char *str ) { return _to_offset(str, _ARRAY_AND_SIZE(_RemoteControl)); }
+size_t ProParam_offset( const char *str ) { return _to_offset(str, _ARRAY_AND_SIZE(_ProParam)); }
+size_t Information_offset( const char *str ) { return _to_offset(str, _ARRAY_AND_SIZE(_Information)); }
+size_t tempUnit_offset( const char *str ) { return _to_offset(str, _ARRAY_AND_SIZE(_tempUnit)); }
+size_t TempParam_offset( const char *str ) { return _to_offset(str, _ARRAY_AND_SIZE(_TempParam)); }
 
-size_t EngSave_str( const char *str ) { 
-    size_t pos = _to_str(str, _ARRAY_AND_SIZE(_EngSave);
+size_t EngSave_offset( const char *str ) { 
+    size_t pos = _to_offset(str, _ARRAY_AND_SIZE(_EngSave);
     switch( pos ) {
         case 0:
         case 1:
