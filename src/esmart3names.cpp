@@ -196,8 +196,7 @@ static const char *_EngSave[] = {
     "wDayLoadPower",    // 31 * uint32
     "ChkSum" };
 
-#define _OFFSET_TO_STRING(strings, offset) offset < sizeof(strings)/sizeof(*strings) ? strings[offset] : (""))
-#define _OFFSET_TO_STRING(strings, offset) offset < sizeof(strings)/sizeof(*strings) ? strings[offset] : (""))
+#define _OFFSET_TO_STRING(strings, offset) (offset < sizeof(strings)/sizeof(*strings) ? strings[offset] : (""))
 
 const char *header( size_t byte_offset ) { return _OFFSET_TO_STRING(_header, byte_offset); }
 const char *dev( size_t byte_offset ) { return _OFFSET_TO_STRING(_dev, byte_offset); }
@@ -220,19 +219,19 @@ const char *TempParam( size_t word_offset ) { return _OFFSET_TO_STRING(_TempPara
 
 const char *EngSave( size_t word_offset ) {
     switch( word_offset ) {
-        case offsetof(EngSave_t, wFlag) / 2:
-        case offsetof(EngSave_t, wMonthPower) / 2:
+        case offsetof(ESmart3::EngSave_t, wFlag) / 2:
+        case offsetof(ESmart3::EngSave_t, wMonthPower) / 2:
             break;
-        case offsetof(EngSave_t, wMonthLoadPower) / 2:
+        case offsetof(ESmart3::EngSave_t, wMonthLoadPower) / 2:
             word_offset = 2;
             break;
-        case offsetof(EngSave_t, wDayPower) / 2:
+        case offsetof(ESmart3::EngSave_t, wDayPower) / 2:
             word_offset = 3;
             break;
-        case offsetof(EngSave_t, wDayLoadPower) / 2:
+        case offsetof(ESmart3::EngSave_t, wDayLoadPower) / 2:
             word_offset = 4;
             break;
-        case offsetof(EngSave_t, ChkSum) / 2:
+        case offsetof(ESmart3::EngSave_t, ChkSum) / 2:
             word_offset = 5;
             break;
         default:
@@ -278,19 +277,19 @@ size_t tempUnit_str( const char *str ) { return _to_str(str, _ARRAY_AND_SIZE(_te
 size_t TempParam_str( const char *str ) { return _to_str(str, _ARRAY_AND_SIZE(_TempParam)); }
 
 size_t EngSave_str( const char *str ) { 
-    size_t pos = _to_str(str, _ARRAY_AND_SIZE(_EngSave);
+    size_t pos = _to_str(str, _ARRAY_AND_SIZE(_EngSave));
     switch( pos ) {
         case 0:
         case 1:
             return pos;
         case 2:
-            return offsetof(EngSave_t, wMonthLoadPower) / 2;
+            return offsetof(ESmart3::EngSave_t, wMonthLoadPower) / 2;
         case 3:
-            return offsetof(EngSave_t, wDayPower) / 2;
+            return offsetof(ESmart3::EngSave_t, wDayPower) / 2;
         case 4:
-            return offsetof(EngSave_t, wDayLoadPower) / 2;
+            return offsetof(ESmart3::EngSave_t, wDayLoadPower) / 2;
         case 5:
-            return offsetof(EngSave_t, ChkSum) / 2;
+            return offsetof(ESmart3::EngSave_t, ChkSum) / 2;
     }
     return (size_t)-1;
 }
