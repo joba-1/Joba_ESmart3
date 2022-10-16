@@ -144,10 +144,10 @@ bool ESmart3::getDisplayTemperatureUnit( tempUnit_t &unit ) {
 // public Set-Commands
 
 bool ESmart3::setBatParam( BatParam_t &data, size_t start, size_t end ) {
-    uint8_t cmd[sizeof(BatParam_t)];
+    uint8_t cmd[sizeof(data)];
     header_t header = { 0, MPPT, BROADCAST, SET, BatParam, sizeof(cmd) };
     uint16_t *words = (uint16_t *)&data;
-    if( (end - start) * 2 >= sizeof(BatParam_t) ) {
+    if( (end - start) * 2 >= sizeof(data) ) {
         return false;
     } 
     initSetOffset(cmd, (uint8_t *)&words[start], start, end);
@@ -155,6 +155,17 @@ bool ESmart3::setBatParam( BatParam_t &data, size_t start, size_t end ) {
     // hex("cmd", cmd, sizeof(cmd));
     return execute(header, cmd, 0) && header.command == ACK;
     // hex("hdr", (uint8_t *)&header, sizeof(header));
+}
+
+bool ESmart3::setProParam( ProParam_t &data, size_t start, size_t end ) {
+    uint8_t cmd[sizeof(data)];
+    header_t header = { 0, MPPT, BROADCAST, SET, ProParam, sizeof(cmd) };
+    uint16_t *words = (uint16_t *)&data;
+    if( (end - start) * 2 >= sizeof(data) ) {
+        return false;
+    } 
+    initSetOffset(cmd, (uint8_t *)&words[start], start, end);
+    return execute(header, cmd, 0) && header.command == ACK;
 }
 
 bool ESmart3::setMaxChargeCurrent( uint16_t deciAmps ) {
