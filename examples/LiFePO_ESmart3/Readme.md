@@ -30,6 +30,22 @@ Required hardware:
  ABxx--++
 ```
 
+# Output
+This is how the output of the program looks like after a reset and a successful connection to the eSmart3
+
+```
+Start LiFePO_ESmart3 1.0
+setBatParam done
+setProParam done
+
+getChgSts ChgMode: 0, PvVolt: 1/10 V, BatVolt: 141/10 V, ChgCurr: 0/10 A, OutVolt: 0/10 V, LoadVolt: 0/10 V, LoadCurr: 0/10 A, ChgPower: 0 W, LoadPower: 0 W, BatTemp: 24 °C, InnerTemp: 25 °C, BatCap: 100 %, CO2: 1900544/10 kg, Fault: 00-00-00-10-00, SystemReminder: 0
+getBatParam BatType: 0, BatSysType: 1, BulkVolt: 140/10 V, FloatVolt: 0/10 V, MaxChgCurr: 400/10 A, MaxDisChgCurr: 400/10 A, EqualizeChgVolt: 144/10 V, EqualizeChgTime: 90 min, LoadUseSel: 0 %, ChkSum: x0001, Flag: x4442
+getProParam LoadOvp: 150/10 V, LoadUvp: 124/10 V, BatOvp: 163/10 V, BatOvB (Recov): 149/10 V, BatUvp: 112/10 V, BatUvB (Recov): 119/10 V, ChkSum: x3ffb, Flag: x4440
+getInformation model: eSmart3-40A-MPPT, serial: 34000083, date: 20220225, firmware: V4.2, flags: x4442, checksum: x94e0
+```
+
+
 Comments welcome
+
 Joachim Banzhaf
 
