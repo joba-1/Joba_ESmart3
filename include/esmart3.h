@@ -266,6 +266,11 @@ public:
     //   BatType: user, BatSysType: auto, BulkVolt: 14,4V, FloatVolt: 13,7V, 
     //   MaxChgCurr: 40A, MaxDisChgCurr: 40A, EqualizeChgVolt: 14,6V, EqualizeChgTime: 30min
     bool setBatParam( BatParam_t &data, size_t start = 1, size_t end = sizeof(BatParam_t) / 2 - 2 );
+    // Set ProParam_t values in data between [start, end[ word offsets (default excludes wFlag and ChkSum)
+    // Factory default on mine was
+    ///  LoadOvp: 16V, LoadUvp: 10,5V, BatOvp: 16V, BatOvB 15V, BatUvp: 10,5V, BatUvB (Recov): 11V
+    bool setProParam( ProParam_t &data, size_t start = 1, size_t end = sizeof(ProParam_t) / 2 - 1 );
+
     bool setMaxChargeCurrent( uint16_t deciAmps );
     bool setMaxLoadCurrent( uint16_t deciAmps );
     bool setBacklightTime( uint16_t sec );
