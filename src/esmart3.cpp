@@ -128,6 +128,18 @@ bool ESmart3::getEngSave( EngSave_t &data, size_t start, size_t end ) {
     return execute(header, cmd, addr);
 }
 
+bool ESmart3::getLoad( bool &on ) {
+    LoadParam_t data = {0};
+    uint8_t cmd[3];
+    header_t header = { 0, MPPT, BROADCAST, GET, LoadParam, sizeof(cmd) };
+    uint8_t *addr = initGetOffset(cmd, (uint8_t *)&data, 0x0f, 0x10);
+    if( execute(header, cmd, addr) ) {
+        on = (data.wLoadSts != 0);
+        return true;
+    }
+    return false;
+}
+
 bool ESmart3::getDisplayTemperatureUnit( tempUnit_t &unit ) {
     TempParam_t data = {0};
     uint8_t cmd[3];

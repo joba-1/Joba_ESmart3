@@ -106,10 +106,10 @@ public:
         uint16_t wFlag;  // TODO what is this?
         uint16_t wBatType;
         uint16_t wBatSysType;
-        uint16_t wBulkVolt;   // normal charge voltage (13.9V for lead-acid)
+        uint16_t wBulkVolt;  // normal charge voltage (13.9V for lead-acid)
         uint16_t wFloatVolt;  // storage voltage after full charge (13.3V for lead-acid)
         uint16_t wMaxChgCurr;
-        uint16_t wMaxDisChgCurr;
+        uint16_t wMaxDisChgCurr;  // WARNING: does not limit current, only sets fault flag
         uint16_t wEqualizeChgVolt;  // voltage to compensate storage loss (14.4V for lead-acid)
         uint16_t wEqualizeChgTime;  // ~15-30 min every day for lead-acid
         uint16_t bLoadUseSel;
@@ -246,6 +246,7 @@ public:
 
 
     // Get-Commands. If [start, end[ is given (in 16bit offset steps from manual), only relevant part of data is used
+    // Return true if execute() was successful
 
     bool getChgSts( ChgSts_t &data, size_t start = 0, size_t end = sizeof(ChgSts_t) / 2 );
     bool getBatParam( BatParam_t &data, size_t start = 0, size_t end = sizeof(BatParam_t) / 2 );
@@ -256,6 +257,7 @@ public:
     bool getInformation( Information_t &data, size_t start = 0, size_t end = sizeof(Information_t) / 2 );
     bool getEngSave( EngSave_t &data, size_t start = 0, size_t end = sizeof(EngSave_t) / 2 );
 
+    bool getLoad( bool &on );
     bool getDisplayTemperatureUnit( tempUnit_t &unit );
 
 
