@@ -60,10 +60,10 @@ void setup() {
     ESmart3::BatParam_t batParam = {0};
     batParam.wBatType = 0;  // LiFePO: user(0)
     batParam.wBatSysType = s_cells / 4;  // SysType=12V-multiplier and 4 LiFePO cells are ~12V
-    batParam.wBulkVolt = (maxCellDeciVolt - 1) * s_cells;
-    batParam.wFloatVolt = 0;  // no continuous charge
-    batParam.wEqualizeChgVolt = maxCellDeciVolt * s_cells;
-    batParam.wEqualizeChgTime = 90;  // min
+    batParam.wBulkVolt = maxCellDeciVolt * s_cells;  // CC -> CV limit
+    batParam.wFloatVolt = 0;  // no continuous charge for lifepo
+    batParam.wEqualizeChgVolt = 0;  // no monthly refresh charge for lifepo
+    batParam.wEqualizeChgTime = 0;  // minutes refresh for lifepo
     batParam.wMaxChgCurr = capacityAh * p_cells * 10;  // 1C for LiFePO
     if( batParam.wMaxChgCurr > maxDeviceCurr ) {
         batParam.wMaxChgCurr = maxDeviceCurr;  // eSmart3 40A limit
