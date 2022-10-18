@@ -235,7 +235,7 @@ public:
     // Basic methods
 
     // Object represents device at serial port. Send commands with minimal delay given 
-    ESmart3( Stream &serial, uint8_t command_delay_ms = 10 );
+    ESmart3( Stream &serial, uint8_t command_delay_ms = 12 );  // 10ms delay might be too short
 
     // Init serial interface. Set dir_pin to -1 if RS485 hardware sets direction automatically
     void begin( int dir_pin = -1 );
