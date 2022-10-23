@@ -898,7 +898,7 @@ bool check_ntptime() {
 // Status led update
 void handle_breathe() {
     static uint32_t start = 0;  // start of last breath
-    static uint32_t min_duty = PWMRANGE / 20; // limit min brightness
+    static uint32_t min_duty = PWMRANGE / 20;  // limit min brightness
     static uint32_t max_duty = PWMRANGE / 2;  // limit max brightness
     static uint32_t prev_duty = 0;
 
@@ -923,7 +923,7 @@ void handle_breathe() {
         // adjust pwm duty cycle
         prev_duty = duty;
         #if defined(ESP32)
-            ledcWrite(HEALTH_PWM_CH, PWMRANGE - duty);
+            ledcWrite(HEALTH_PWM_CH, duty);
         #else
             analogWrite(HEALTH_LED_PIN, PWMRANGE - duty);
         #endif
