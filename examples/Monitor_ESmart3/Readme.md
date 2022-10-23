@@ -1,6 +1,9 @@
-# ESP32 Arduino Firmware to Monitor eSmart-40A and send Status to Influx DB with the Joba_ESmart3 Library
+# Monitor for eSmart3 MPPT solar charger
 
-Work in Progress: post to influx not working yet (hangs after first insert)
+ESP32 Arduino firmware to monitor eSmart3 chargers and send status to an Influx db with the Joba_ESmart3 library.
+Switching load on and off is also possible.
+
+Running the monitor on an ESP8266 might work but is not tested.
 
 # Installation
 There are many options to compile and install an ESP32 Arduino firmware. I use this one on linux:
@@ -31,9 +34,10 @@ Required hardware:
 
 # InfluxDB
 relevant connection data (Influx host, database, ...) is configured in platformio.ini
+Create necessary database like this on the influx server: `influx --execute 'create database eSmart3'` 
 
-* checks Information at startup
-* checks ChgSts every second
+* checks Information every ten minutes
+* checks ChgSts every half second
 * checks BatParam, LoadParam, ProParam every minute
 * checks Log(wStartCnt, wFaultCnt, dwTotalEng, dwLoadTotalEng, wBacklightTime, bSwitchEnable) every minute  
 * updates database at startup and on changes
@@ -42,11 +46,11 @@ relevant connection data (Influx host, database, ...) is configured in platformi
 # Networking
 since WiFi is needed for Influx anyways, it is used for other stuff as well:
 * Webserver 
-    * display status page of ChgSts (meta refresh or ajax)
-    * OTA firmware update
-    * display and update of some values of BatParam, LoadParam, ProParam and Log
-* NTP to set ESmart3 time if out of sync (read ESmart time needed) or at startup once
-* Syslog and mqtt publish of status on changes (max once per minute)
+    * display links for JSON of all item categories
+    * enables OTA firmware update
+    * display (and later update) of some values of BatParam, LoadParam, ProParam and Log
+* planned: NTP to set ESmart3 time if out of sync (maybe later: read ESmart time needed) or at startup once
+* Syslog (and later mqtt publish) of status on changes
 
 
 Comments welcome
