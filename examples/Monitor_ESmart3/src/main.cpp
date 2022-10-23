@@ -36,6 +36,12 @@ Use pin 22 to toggle RS485 read/write
 
     // Post to InfluxDB
     #include <ESP8266HTTPClient.h>
+
+    // Time sync
+    #include <NTPClient.h>
+    #include <WiFiUdp.h>
+    WiFiUDP ntpUDP;
+    NTPClient ntp(ntpUDP, NTP_SERVER);
 #elif defined(ESP32)
     HardwareSerial &rs485 = Serial2;
 
@@ -57,15 +63,16 @@ Use pin 22 to toggle RS485 read/write
 
     // Post to InfluxDB
     #include <HTTPClient.h>
+    
+    // Time sync
+    #include <time.h>
 #else
     #error "No ESP8266 or ESP32, define your rs485 stream, pins and includes here!"
 #endif
 
 // Infrastructure
-#include <NTPClient.h>
 #include <Syslog.h>
 #include <WiFiManager.h>
-#include <WiFiUdp.h>
 
 // Web status page and OTA updater
 #define WEBSERVER_PORT 80
@@ -90,11 +97,6 @@ bool enabledBreathing = true;  // global flag to switch breathing animation on o
 #define PWMRANGE 1023
 #define PWMBITS 10
 #endif
-
-// Time sync
-WiFiUDP ntpUDP;
-NTPClient ntp(ntpUDP, NTP_SERVER);
-static char start_time[30] = "";
 
 // Syslog
 WiFiUDP logUDP;
@@ -738,13 +740,15 @@ bool handle_load_led() {
 }
 
 
+#if defined(ESP8266)
+
 // check ntp status
 // return true if time is valid
 bool check_ntptime() {
     static bool have_time = false;
 
     ntp.update();
-    if (!have_time && ntp.getEpochTime() > (2000UL - 1970) * 365 * 24 * 60 * 60 ) {
+    if (!have_time && ntp.isTimeSet()) {
         have_time = true;
         time_t now = time(NULL);
         strftime(start_time, sizeof(start_time), "%FT%T%Z", localtime(&now));
@@ -753,6 +757,8 @@ bool check_ntptime() {
 
     return have_time;
 }
+
+#endif
 
 
 // Status led update
@@ -834,7 +840,11 @@ void setup() {
     Serial.println(msg);
     syslog.logf(LOG_NOTICE, msg);
 
-    ntp.begin();
+    #if defined(ESP8266)
+        ntp.begin();
+    #else
+        configTime(0, 0, NTP_SERVER);
+    #endif
 
     MDNS.begin(WiFi.getHostname());
 
@@ -867,9 +877,13 @@ void setup() {
 void loop() {
     // TODO set/reset err_interval for breathing
     handle_esmart3_information();
-    bool have_time = check_ntptime();
+    #if defined(ESP8266)
+        bool have_time = check_ntptime();
+    #else
+        bool have_time = time(0) > 1666000000;
+    #endif
     if( es3Information.wSerial[0] ) {  // we have required esmart3 infos
-        if( have_time && enabledBreathing ) {
+        if (have_time && enabledBreathing) {
             handle_breathe();
         }
         handle_esmart3_chgSts();
