@@ -99,6 +99,7 @@ static char start_time[30] = "";
 // Syslog
 WiFiUDP logUDP;
 Syslog syslog(logUDP, SYSLOG_PROTO_IETF);
+char msg[512];  // one buffer for all syslog and json messages
 
 // eSmart3 device
 #include <esmart3.h>
@@ -110,13 +111,15 @@ ESmart3 esmart3(rs485);  // Serial port to communicate with RS485 adapter
 
 // Post data to InfluxDB
 bool postInflux(const char *line) {
-    return true;
     static const char uri[] = "/write?db=" INFLUX_DB "&precision=s";
 
     http.begin(client, INFLUX_SERVER, INFLUX_PORT, uri);
     http.setUserAgent(PROGNAME);
     influx_status = http.POST(line);
-    String payload = http.getString();
+    String payload;
+    if (http.getSize() > 0) { // workaround for bug in getString()
+        payload = http.getString();
+    }
     http.end();
 
     if (influx_status < 200 || influx_status >= 300) {
@@ -157,7 +160,6 @@ void handle_esmart3_information() {
                     "Model=\"%16.16s\","
                     "Date=\"%8.8s\","
                     "FirmWare=\"%4.4s\"";
-                char msg[sizeof(jsonFmt) + 16 + 8 + 8 + 4];
 
                 es3Information = data;
                 snprintf(msg, sizeof(msg), jsonFmt, (char *)data.wSerial, 
@@ -228,7 +230,6 @@ void handle_esmart3_chgSts() {
                     "CO2=%u,"
                     "Fault=\"%d%d%d%d%d%d%d%d%d%d\","
                     "SystemReminder=%u";
-                char msg[512];
                 
                 es3ChgSts = data;
                 snprintf(jsonChgSts, sizeof(jsonChgSts), jsonFmt, (char *)es3Information.wSerial,
@@ -295,7 +296,6 @@ void handle_esmart3_batParam() {
                     "EqualizeChgVolt=%u,"
                     "EqualizeChgTime=%u,"
                     "LoadUseSel=%u";
-                char msg[512];
                 
                 es3BatParam = data;
                 snprintf(msg, sizeof(msg), jsonFmt, (char *)es3Information.wSerial,
@@ -355,16 +355,15 @@ void handle_esmart3_log() {
                     "LastFaultInfo=%u,"
                     "FaultCnt=%u,"
                     "TodayEng=%u,"
-                    "TodayEngDate=%d:%d,"
+                    "TodayEngDate=\"%d:%d\","
                     "MonthEng=%u,"
-                    "MonthEngDate=%d:%d,"
+                    "MonthEngDate=\"%d:%d\","
                     "TotalEng=%u,"
                     "LoadTodayEng=%u,"
                     "LoadMonthEng=%u,"
                     "LoadTotalEng=%u,"
                     "BacklightTime=%u,"
                     "SwitchEnable=%u";
-                char msg[512];
                 
                 es3Log = data;
                 snprintf(msg, sizeof(msg), jsonFmt, (char *)es3Information.wSerial,
@@ -433,7 +432,6 @@ void handle_esmart3_parameters() {
                     "LoadVoltOffset=%u,"
                     "OutVoltRatio=%u,"
                     "OutVoltOffset=%u";
-                char msg[512];
                 
                 es3Parameters = data;
                 snprintf(msg, sizeof(msg), jsonFmt, (char *)es3Information.wSerial,
@@ -494,13 +492,12 @@ void handle_esmart3_loadParam() {
                     "LoadOffPvVolt=%u,"
                     "PvContrlTurnOnDelay=%u,"
                     "PvContrlTurnOffDelay=%u,"
-                    "AftLoadOnTime=%d:%d,"
-                    "AftLoadOffTime=%d:%d,"
-                    "MonLoadOnTime=%d:%d,"
-                    "MonLoadOffTime=%d:%d,"
+                    "AftLoadOnTime=\"%d:%d\","
+                    "AftLoadOffTime=\"%d:%d\","
+                    "MonLoadOnTime=\"%d:%d\","
+                    "MonLoadOffTime=\"%d:%d\","
                     "LoadSts=%u,"
                     "Time2Enable=%u";
-                char msg[512];
                 
                 es3LoadParam = data;
                 snprintf(msg, sizeof(msg), jsonFmt, (char *)es3Information.wSerial,
@@ -550,14 +547,13 @@ void handle_esmart3_proParam() {
                     "\"BatUvB\":%u}}";
                 static const char lineFmt[] =
                     "ProParam,Serial=%8.8s,Version=" VERSION " "
-                    "Host=%s,"
+                    "Host=\"%s\","
                     "LoadOvp=%u,"
                     "LoadUvp=%u,"
                     "BatOvp=%u,"
                     "BatOvB=%u,"
                     "BatUvp=%u,"
                     "BatUvB=%u";
-                char msg[512];
                 
                 es3ProParam = data;
                 snprintf(msg, sizeof(msg), jsonFmt, (char *)es3Information.wSerial,
@@ -600,15 +596,18 @@ const char *main_page( const char *body ) {
         "  </tr></table>\n"
         "  <div>Post firmware image to /update<div>\n"
         "  <div>Influx status: %d<div>\n"
-        "  <div>Last update: %s<div>\n"
+        "  <div>Last influx update: %s<div>\n"
+        "  <div>Last web update: %s<div>\n"
         " </body>\n"
         "</html>\n";
     static char page[sizeof(fmt) + 500] = "";
-    static char curr_time[30];
+    static char curr_time[30], influx_time[30];
     time_t now;
     time(&now);
     strftime(curr_time, sizeof(curr_time), "%FT%T%Z", localtime(&now));
-    snprintf(page, sizeof(page), fmt, (char *)es3Information.wSerial, (char *)es3Information.wSerial, body, influx_status, curr_time);
+    strftime(influx_time, sizeof(influx_time), "%FT%T%Z", localtime(&post_time));
+    snprintf(page, sizeof(page), fmt, (char *)es3Information.wSerial,
+        (char *)es3Information.wSerial, body, influx_status, influx_time, curr_time);
     return page;
 }
 
@@ -868,8 +867,9 @@ void setup() {
 void loop() {
     // TODO set/reset err_interval for breathing
     handle_esmart3_information();
+    bool have_time = check_ntptime();
     if( es3Information.wSerial[0] ) {  // we have required esmart3 infos
-        if( check_ntptime() && enabledBreathing ) {
+        if( have_time && enabledBreathing ) {
             handle_breathe();
         }
         handle_esmart3_chgSts();
