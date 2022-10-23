@@ -109,7 +109,7 @@ char start_time[30];
 
 #define RS485_DIR_PIN 22  // != -1: Use pin for explicit DE/!RE
 
-    ESmart3 esmart3(rs485);  // Serial port to communicate with RS485 adapter
+ESmart3 esmart3(rs485);  // Serial port to communicate with RS485 adapter
 
 
 // Post data to InfluxDB
@@ -138,10 +138,24 @@ bool postInflux(const char *line) {
 }
 
 
+bool json_Information(char *json, size_t maxlen, ESmart3::Information_t data) {
+    static const char jsonFmt[] =
+        "{\"Version\":" VERSION ",\"Serial\":\"%8.8s\",\"Information\":{"
+        "\"Model\":\"%16.16s\","
+        "\"Date\":\"%8.8s\","
+        "\"FirmWare\":\"%4.4s\"}}";
+
+    int len = snprintf(json, maxlen, jsonFmt, (char *)data.wSerial, 
+        (char *)data.wModel, (char *)data.wDate, (char *)data.wFirmWare);
+
+    return len < maxlen;
+}
+
+
 ESmart3::Information_t es3Information = {0};
 
 // get device info once every minute
-void handle_esmart3_information() {
+void handle_es3Information() {
     static const uint32_t interval = 60000;
     static uint32_t prev = 0 - interval + 0;  // check at start first
 
@@ -152,11 +166,6 @@ void handle_esmart3_information() {
         if (esmart3.getInformation(data)) {
             if (strncmp((const char *)data.wSerialID, (const char *)es3Information.wSerialID, sizeof(data.wSerialID))) {
                 // found a new/different eSmart3
-                static const char jsonFmt[] =
-                    "{\"Version\":" VERSION ",\"Serial\":\"%8.8s\",\"Information\":{"
-                    "\"Model\":\"%16.16s\","
-                    "\"Date\":\"%8.8s\","
-                    "\"FirmWare\":\"%4.4s\"}}";
                 static const char lineFmt[] =
                     "Information,Serial=%8.8s,Version=" VERSION " "
                     "Host=\"%s\","
@@ -165,8 +174,7 @@ void handle_esmart3_information() {
                     "FirmWare=\"%4.4s\"";
 
                 es3Information = data;
-                snprintf(msg, sizeof(msg), jsonFmt, (char *)data.wSerial, 
-                    (char *)data.wModel, (char *)data.wDate, (char *)data.wFirmWare);
+                json_Information(msg, sizeof(msg), data);
                 Serial.println(msg);
                 syslog.log(LOG_INFO, msg);
                 // TODO mqtt.publish(topic, msg);
@@ -183,11 +191,41 @@ void handle_esmart3_information() {
 }
 
 
+bool json_ChgSts(char *json, size_t maxlen, ESmart3::ChgSts_t data) {
+    static const char jsonFmt[] =
+        "{\"Version\":" VERSION ",\"Serial\":\"%8.8s\",\"ChgSts\":{"
+        "\"ChgMode\":%u,"
+        "\"PvVolt\":%u,"
+        "\"BatVolt\":%u,"
+        "\"ChgCurr\":%u,"
+        "\"OutVolt\":%u,"
+        "\"LoadVolt\":%u,"
+        "\"LoadCurr\":%u,"
+        "\"ChgPower\":%u,"
+        "\"LoadPower\":%u,"
+        "\"BatTemp\":%d,"
+        "\"InnerTemp\":%d,"
+        "\"BatCap\":%u,"
+        "\"CO2\":%u,"
+        "\"Fault\":\"%d%d%d%d%d%d%d%d%d%d\","
+        "\"SystemReminder\":%u}}";
+
+    int len = snprintf(json, maxlen, jsonFmt, (char *)es3Information.wSerial,
+        data.wChgMode, data.wPvVolt, data.wBatVolt, data.wChgCurr, data.wOutVolt,
+        data.wLoadVolt, data.wLoadCurr, data.wChgPower, data.wLoadPower, data.wBatTemp, 
+        data.wInnerTemp, data.wBatCap, data.dwCO2, ESmart3::isBatteryVoltageOver(data.wFault), ESmart3::isPvVoltageOver(data.wFault),
+        ESmart3::isChargeCurrentOver(data.wFault), ESmart3::isDischargeCurrentOver(data.wFault), ESmart3::isBatteryTemperatureAlarm(data.wFault),
+        ESmart3::isInternalTemperatureAlarm(data.wFault), ESmart3::isPvVoltageLow(data.wFault), ESmart3::isBatteryVoltageLow(data.wFault),
+        ESmart3::isTripZeroProtectionTrigger(data.wFault), ESmart3::isControlByManualSwitchgear(data.wFault), data.wSystemReminder);
+
+    return len < maxlen;
+}
+
+
 ESmart3::ChgSts_t es3ChgSts = {0};
-char jsonChgSts[512] = "{}";
 
 // get device status once every 1/2 second
-void handle_esmart3_chgSts() {
+void handle_es3ChgSts() {
     static const uint32_t interval = 500 + 50;
     static uint32_t prev = 0 - interval;  // check at start + delay
 
@@ -198,23 +236,6 @@ void handle_esmart3_chgSts() {
         if( esmart3.getChgSts(data) ) {
             if( memcmp(&data, &es3ChgSts, sizeof(data) ) ) {
                 // values have changed: publish
-                static const char jsonFmt[] =
-                    "{\"Version\":" VERSION ",\"Serial\":\"%8.8s\",\"ChgSts\":{"
-                    "\"ChgMode\":%u,"
-                    "\"PvVolt\":%u,"
-                    "\"BatVolt\":%u,"
-                    "\"ChgCurr\":%u,"
-                    "\"OutVolt\":%u,"
-                    "\"LoadVolt\":%u,"
-                    "\"LoadCurr\":%u,"
-                    "\"ChgPower\":%u,"
-                    "\"LoadPower\":%u,"
-                    "\"BatTemp\":%d,"
-                    "\"InnerTemp\":%d,"
-                    "\"BatCap\":%u,"
-                    "\"CO2\":%u,"
-                    "\"Fault\":\"%d%d%d%d%d%d%d%d%d%d\","
-                    "\"SystemReminder\":%u}}";
                 static const char lineFmt[] =
                     "ChgSts,Serial=%8.8s,Version=" VERSION " "
                     "Host=\"%s\","
@@ -235,16 +256,10 @@ void handle_esmart3_chgSts() {
                     "SystemReminder=%u";
                 
                 es3ChgSts = data;
-                snprintf(jsonChgSts, sizeof(jsonChgSts), jsonFmt, (char *)es3Information.wSerial,
-                    data.wChgMode, data.wPvVolt, data.wBatVolt, data.wChgCurr, data.wOutVolt,
-                    data.wLoadVolt, data.wLoadCurr, data.wChgPower, data.wLoadPower, data.wBatTemp, 
-                    data.wInnerTemp, data.wBatCap, data.dwCO2, ESmart3::isBatteryVoltageOver(data.wFault), ESmart3::isPvVoltageOver(data.wFault),
-                    ESmart3::isChargeCurrentOver(data.wFault), ESmart3::isDischargeCurrentOver(data.wFault), ESmart3::isBatteryTemperatureAlarm(data.wFault),
-                    ESmart3::isInternalTemperatureAlarm(data.wFault), ESmart3::isPvVoltageLow(data.wFault), ESmart3::isBatteryVoltageLow(data.wFault),
-                    ESmart3::isTripZeroProtectionTrigger(data.wFault), ESmart3::isControlByManualSwitchgear(data.wFault), data.wSystemReminder);
-                Serial.println(jsonChgSts);
-                syslog.log(LOG_INFO, jsonChgSts);
-                // TODO mqtt.publish(topic, jsonChgSts);
+                json_ChgSts(msg, sizeof(msg), data);
+                Serial.println(msg);
+                syslog.log(LOG_INFO, msg);
+                // TODO mqtt.publish(topic, msg);
                 snprintf(msg, sizeof(msg), lineFmt, (char *)es3Information.wSerial, WiFi.getHostname(), 
                     data.wChgMode, data.wPvVolt, data.wBatVolt, data.wChgCurr, data.wOutVolt,
                     data.wLoadVolt, data.wLoadCurr, data.wChgPower, data.wLoadPower, data.wBatTemp, 
@@ -262,10 +277,31 @@ void handle_esmart3_chgSts() {
 }
 
 
+bool json_BatParam(char *json, size_t maxlen, ESmart3::BatParam_t data) {
+    static const char jsonFmt[] =
+        "{\"Version\":" VERSION ",\"Serial\":\"%8.8s\",\"BatParam\":{"
+        "\"BatType\":%u,"
+        "\"BatSysType\":%u,"
+        "\"BulkVolt\":%u,"
+        "\"FloatVolt\":%u,"
+        "\"MaxChgCurr\":%u,"
+        "\"MaxDisChgCurr\":%u,"
+        "\"EqualizeChgVolt\":%u,"
+        "\"EqualizeChgTime\":%u,"
+        "\"LoadUseSel\":%u}}";
+
+    int len = snprintf(json, maxlen, jsonFmt, (char *)es3Information.wSerial,
+        data.wBatType, data.wBatSysType, data.wBulkVolt, data.wFloatVolt, data.wMaxChgCurr,
+        data.wMaxDisChgCurr, data.wEqualizeChgVolt, data.wEqualizeChgTime, data.bLoadUseSel);
+
+    return len < maxlen;
+}
+
+
 ESmart3::BatParam_t es3BatParam = {0};
 
 // get battery parameters once every 10s
-void handle_esmart3_batParam() {
+void handle_es3BatParam() {
     static const uint32_t interval = 10000;
     static uint32_t prev = 0 - interval + 100;  // check at start + delay
 
@@ -276,17 +312,6 @@ void handle_esmart3_batParam() {
         if( esmart3.getBatParam(data) ) {
             if( memcmp(&data, &es3BatParam, sizeof(data) ) ) {
                 // values have changed: publish
-                static const char jsonFmt[] =
-                    "{\"Version\":" VERSION ",\"Serial\":\"%8.8s\",\"BatParam\":{"
-                    "\"BatType\":%u,"
-                    "\"BatSysType\":%u,"
-                    "\"BulkVolt\":%u,"
-                    "\"FloatVolt\":%u,"
-                    "\"MaxChgCurr\":%u,"
-                    "\"MaxDisChgCurr\":%u,"
-                    "\"EqualizeChgVolt\":%u,"
-                    "\"EqualizeChgTime\":%u,"
-                    "\"LoadUseSel\":%u}}";
                 static const char lineFmt[] =
                     "BatParam,Serial=%8.8s,Version=" VERSION " "
                     "Host=\"%s\","
@@ -301,9 +326,7 @@ void handle_esmart3_batParam() {
                     "LoadUseSel=%u";
                 
                 es3BatParam = data;
-                snprintf(msg, sizeof(msg), jsonFmt, (char *)es3Information.wSerial,
-                    data.wBatType, data.wBatSysType, data.wBulkVolt, data.wFloatVolt, data.wMaxChgCurr,
-                    data.wMaxDisChgCurr, data.wEqualizeChgVolt, data.wEqualizeChgTime, data.bLoadUseSel);
+                json_BatParam(msg, sizeof(msg), data);
                 Serial.println(msg);
                 syslog.log(LOG_INFO, msg);
                 // TODO mqtt.publish(topic, msg);
@@ -320,10 +343,38 @@ void handle_esmart3_batParam() {
 }
 
 
+bool json_Log(char *json, size_t maxlen, ESmart3::Log_t data) {
+    static const char jsonFmt[] =
+        "{\"Version\":" VERSION ",\"Serial\":\"%8.8s\",\"Log\":{"
+        "\"RunTime\":%u,"
+        "\"StartCnt\":%u,"
+        "\"LastFaultInfo\":%u,"
+        "\"FaultCnt\":%u,"
+        "\"TodayEng\":%u,"
+        "\"TodayEngDate\":\"%d:%d\","
+        "\"MonthEng\":%u,"
+        "\"MonthEngDate\":\"%d:%d\","
+        "\"TotalEng\":%u,"
+        "\"LoadTodayEng\":%u,"
+        "\"LoadMonthEng\":%u,"
+        "\"LoadTotalEng\":%u,"
+        "\"BacklightTime\":%u,"
+        "\"SwitchEnable\":%u}}";
+
+    int len = snprintf(json, maxlen, jsonFmt, (char *)es3Information.wSerial,
+        data.dwRunTime, data.wStartCnt, data.wLastFaultInfo, data.wFaultCnt, 
+        data.dwTodayEng, data.wTodayEngDate.month, data.wTodayEngDate.day, data.dwMonthEng, 
+        data.wMonthEngDate.month, data.wMonthEngDate.day, data.dwTotalEng, data.dwLoadTodayEng, 
+        data.dwLoadMonthEng, data.dwLoadTotalEng, data.wBacklightTime, data.bSwitchEnable);
+
+    return len < maxlen;
+}
+
+
 ESmart3::Log_t es3Log = {0};
 
 // get status log once every 10s
-void handle_esmart3_log() {
+void handle_es3Log() {
     static const uint32_t interval = 10000;
     static uint32_t prev = 0 - interval + 150;  // check at start + delay
 
@@ -334,22 +385,6 @@ void handle_esmart3_log() {
         if( esmart3.getLog(data) ) {
             if( memcmp(&data.wStartCnt, &es3Log.wStartCnt, sizeof(data) - offsetof(ESmart3::Log_t, wStartCnt) ) ) {
                 // values have changed: publish
-                static const char jsonFmt[] =
-                    "{\"Version\":" VERSION ",\"Serial\":\"%8.8s\",\"Log\":{"
-                    "\"RunTime\":%u,"
-                    "\"StartCnt\":%u,"
-                    "\"LastFaultInfo\":%u,"
-                    "\"FaultCnt\":%u,"
-                    "\"TodayEng\":%u,"
-                    "\"TodayEngDate\":\"%d:%d\","
-                    "\"MonthEng\":%u,"
-                    "\"MonthEngDate\":\"%d:%d\","
-                    "\"TotalEng\":%u,"
-                    "\"LoadTodayEng\":%u,"
-                    "\"LoadMonthEng\":%u,"
-                    "\"LoadTotalEng\":%u,"
-                    "\"BacklightTime\":%u,"
-                    "\"SwitchEnable\":%u}}";
                 static const char lineFmt[] =
                     "Log,Serial=%8.8s,Version=" VERSION " "
                     "Host=\"%s\","
@@ -369,11 +404,7 @@ void handle_esmart3_log() {
                     "SwitchEnable=%u";
                 
                 es3Log = data;
-                snprintf(msg, sizeof(msg), jsonFmt, (char *)es3Information.wSerial,
-                    data.dwRunTime, data.wStartCnt, data.wLastFaultInfo, data.wFaultCnt, 
-                    data.dwTodayEng, data.wTodayEngDate.month, data.wTodayEngDate.day, data.dwMonthEng, 
-                    data.wMonthEngDate.month, data.wMonthEngDate.day, data.dwTotalEng, data.dwLoadTodayEng, 
-                    data.dwLoadMonthEng, data.dwLoadTotalEng, data.wBacklightTime, data.bSwitchEnable);
+                json_Log(msg, sizeof(msg), data);
                 Serial.println(msg);
                 syslog.log(LOG_INFO, msg);
                 // TODO mqtt.publish(topic, msg);
@@ -392,10 +423,35 @@ void handle_esmart3_log() {
 }
 
 
+bool json_Parameters(char *json, size_t maxlen, ESmart3::Parameters_t data) {
+    static const char jsonFmt[] =
+        "{\"Version\":" VERSION ",\"Serial\":\"%8.8s\",\"Parameters\":{"
+        "\"PvVoltRatio\":%u,"
+        "\"PvVoltOffset\":%u,"
+        "\"BatVoltRatio\":%u,"
+        "\"BatVoltOffset\":%u,"
+        "\"ChgCurrRatio\":%u,"
+        "\"ChgCurrOffset\":%u,"
+        "\"LoadCurrRatio\":%u,"
+        "\"LoadCurrOffset\":%u,"
+        "\"LoadVoltRatio\":%u,"
+        "\"LoadVoltOffset\":%u,"
+        "\"OutVoltRatio\":%u,"
+        "\"OutVoltOffset\":%u}}";
+
+    int len = snprintf(json, maxlen, jsonFmt, (char *)es3Information.wSerial,
+        data.wPvVoltRatio, data.wPvVoltOffset, data.wBatVoltRatio, data.wBatVoltOffset, 
+        data.wChgCurrRatio, data.wChgCurrOffset, data.wLoadCurrRatio, data.wLoadCurrOffset, 
+        data.wLoadVoltRatio, data.wLoadVoltOffset, data.wOutVoltRatio, data.wOutVoltOffset);
+
+    return len < maxlen;
+}
+
+
 ESmart3::Parameters_t es3Parameters = {0};
 
 // get calibration parameters once every 10s
-void handle_esmart3_parameters() {
+void handle_es3Parameters() {
     static const uint32_t interval = 10000;
     static uint32_t prev = 0 - interval + 200;  // check at start + delay
 
@@ -406,20 +462,6 @@ void handle_esmart3_parameters() {
         if( esmart3.getParameters(data) ) {
             if( memcmp(&data, &es3Parameters, sizeof(data)) ) {
                 // values have changed: publish
-                static const char jsonFmt[] =
-                    "{\"Version\":" VERSION ",\"Serial\":\"%8.8s\",\"Parameters\":{"
-                    "\"PvVoltRatio\":%u,"
-                    "\"PvVoltOffset\":%u,"
-                    "\"BatVoltRatio\":%u,"
-                    "\"BatVoltOffset\":%u,"
-                    "\"ChgCurrRatio\":%u,"
-                    "\"ChgCurrOffset\":%u,"
-                    "\"LoadCurrRatio\":%u,"
-                    "\"LoadCurrOffset\":%u,"
-                    "\"LoadVoltRatio\":%u,"
-                    "\"LoadVoltOffset\":%u,"
-                    "\"OutVoltRatio\":%u,"
-                    "\"OutVoltOffset\":%u}}";
                 static const char lineFmt[] =
                     "Parameters,Serial=%8.8s,Version=" VERSION " "
                     "Host=\"%s\","
@@ -437,12 +479,9 @@ void handle_esmart3_parameters() {
                     "OutVoltOffset=%u";
                 
                 es3Parameters = data;
-                snprintf(msg, sizeof(msg), jsonFmt, (char *)es3Information.wSerial,
-                    data.wPvVoltRatio, data.wPvVoltOffset, data.wBatVoltRatio, data.wBatVoltOffset, 
-                    data.wChgCurrRatio, data.wChgCurrOffset, data.wLoadCurrRatio, data.wLoadCurrOffset, 
-                    data.wLoadVoltRatio, data.wLoadVoltOffset, data.wOutVoltRatio, data.wOutVoltOffset);
-                Serial.println(msg);
-                syslog.log(LOG_INFO, msg);
+                json_Parameters(msg, sizeof(msg), data);
+                // Serial.println(msg);
+                // syslog.log(LOG_INFO, msg);
                 // TODO mqtt.publish(topic, msg);
                 snprintf(msg, sizeof(msg), lineFmt, (char *)es3Information.wSerial, WiFi.getHostname(), 
                     data.wPvVoltRatio, data.wPvVoltOffset, data.wBatVoltRatio, data.wBatVoltOffset, 
@@ -458,10 +497,36 @@ void handle_esmart3_parameters() {
 }
 
 
+bool json_LoadParam(char *json, size_t maxlen, ESmart3::LoadParam_t data) {
+    static const char jsonFmt[] =
+        "{\"Version\":" VERSION ",\"Serial\":\"%8.8s\",\"LoadParam\":{"
+        "\"LoadModuleSelect1\":%u,"
+        "\"LoadModuleSelect2\":%u,"
+        "\"LoadOnPvVolt\":%u,"
+        "\"LoadOffPvVolt\":%u,"
+        "\"PvContrlTurnOnDelay\":%u,"
+        "\"PvContrlTurnOffDelay\":%u,"
+        "\"AftLoadOnTime\":\"%d:%d\","
+        "\"AftLoadOffTime\":\"%d:%d\","
+        "\"MonLoadOnTime\":\"%d:%d\","
+        "\"MonLoadOffTime\":\"%d:%d\","
+        "\"LoadSts\":%u,"
+        "\"Time2Enable\":%u}}";
+
+    int len = snprintf(json, maxlen, jsonFmt, (char *)es3Information.wSerial,
+        data.wLoadModuleSelect1, data.wLoadModuleSelect2, data.wLoadOnPvVolt, data.wLoadOffPvVolt, 
+        data.wPvContrlTurnOnDelay, data.wPvContrlTurnOffDelay, data.AftLoadOnTime.hour, data.AftLoadOnTime.minute, 
+        data.AftLoadOffTime.hour, data.AftLoadOffTime.minute, data.MonLoadOnTime.hour, data.MonLoadOnTime.minute, 
+        data.MonLoadOffTime.hour, data.MonLoadOffTime.minute, data.wLoadSts, data.wTime2Enable);
+
+    return len < maxlen;
+}
+
+
 ESmart3::LoadParam_t es3LoadParam = {0};
 
 // get load parameters once every 10s
-void handle_esmart3_loadParam() {
+void handle_es3LoadParam() {
     static const uint32_t interval = 10000;
     static uint32_t prev = 0 - interval + 250;  // check at start + delay
 
@@ -472,20 +537,6 @@ void handle_esmart3_loadParam() {
         if( esmart3.getLoadParam(data) ) {
             if( memcmp(&data, &es3LoadParam, sizeof(data) ) ) {
                 // values have changed: publish
-                static const char jsonFmt[] =
-                    "{\"Version\":" VERSION ",\"Serial\":\"%8.8s\",\"LoadParam\":{"
-                    "\"LoadModuleSelect1\":%u,"
-                    "\"LoadModuleSelect2\":%u,"
-                    "\"LoadOnPvVolt\":%u,"
-                    "\"LoadOffPvVolt\":%u,"
-                    "\"PvContrlTurnOnDelay\":%u,"
-                    "\"PvContrlTurnOffDelay\":%u,"
-                    "\"AftLoadOnTime\":\"%d:%d\","
-                    "\"AftLoadOffTime\":\"%d:%d\","
-                    "\"MonLoadOnTime\":\"%d:%d\","
-                    "\"MonLoadOffTime\":\"%d:%d\","
-                    "\"LoadSts\":%u,"
-                    "\"Time2Enable\":%u}}";
                 static const char lineFmt[] =
                     "LoadParam,Serial=%8.8s,Version=" VERSION " "
                     "Host=\"%s\","
@@ -503,11 +554,7 @@ void handle_esmart3_loadParam() {
                     "Time2Enable=%u";
                 
                 es3LoadParam = data;
-                snprintf(msg, sizeof(msg), jsonFmt, (char *)es3Information.wSerial,
-                    data.wLoadModuleSelect1, data.wLoadModuleSelect2, data.wLoadOnPvVolt, data.wLoadOffPvVolt, 
-                    data.wPvContrlTurnOnDelay, data.wPvContrlTurnOffDelay, data.AftLoadOnTime.hour, data.AftLoadOnTime.minute, 
-                    data.AftLoadOffTime.hour, data.AftLoadOffTime.minute, data.MonLoadOnTime.hour, data.MonLoadOnTime.minute, 
-                    data.MonLoadOffTime.hour, data.MonLoadOffTime.minute, data.wLoadSts, data.wTime2Enable);
+                json_LoadParam(msg, sizeof(msg), data);
                 Serial.println(msg);
                 syslog.log(LOG_INFO, msg);
                 // TODO mqtt.publish(topic, msg);
@@ -526,10 +573,27 @@ void handle_esmart3_loadParam() {
 }
 
 
+bool json_ProParam(char *json, size_t maxlen, ESmart3::ProParam_t data) {
+    static const char jsonFmt[] =
+        "{\"Version\":" VERSION ",\"Serial\":\"%8.8s\",\"ProParam\":{"
+        "\"LoadOvp\":%u,"
+        "\"LoadUvp\":%u,"
+        "\"BatOvp\":%u,"
+        "\"BatOvB\":%u,"
+        "\"BatUvp\":%u,"
+        "\"BatUvB\":%u}}";
+
+    int len = snprintf(json, maxlen, jsonFmt, (char *)es3Information.wSerial,
+        data.wLoadOvp, data.wLoadUvp, data.wBatOvp, data.wBatOvB, data.wBatUvp, data.wBatUvB);
+
+    return len < maxlen;
+}
+
+
 ESmart3::ProParam_t es3ProParam = {0};
 
 // get protection parameters once every 10s
-void handle_esmart3_proParam() {
+void handle_es3ProParam() {
     static const uint32_t interval = 10000;
     static uint32_t prev = 0 - interval + 300;  // check at start + delay
 
@@ -540,14 +604,6 @@ void handle_esmart3_proParam() {
         if( esmart3.getProParam(data) ) {
             if( memcmp(&data, &es3ProParam, sizeof(data) ) ) {
                 // values have changed: publish
-                static const char jsonFmt[] =
-                    "{\"Version\":" VERSION ",\"Serial\":\"%8.8s\",\"ProParam\":{"
-                    "\"LoadOvp\":%u,"
-                    "\"LoadUvp\":%u,"
-                    "\"BatOvp\":%u,"
-                    "\"BatOvB\":%u,"
-                    "\"BatUvp\":%u,"
-                    "\"BatUvB\":%u}}";
                 static const char lineFmt[] =
                     "ProParam,Serial=%8.8s,Version=" VERSION " "
                     "Host=\"%s\","
@@ -559,8 +615,7 @@ void handle_esmart3_proParam() {
                     "BatUvB=%u";
                 
                 es3ProParam = data;
-                snprintf(msg, sizeof(msg), jsonFmt, (char *)es3Information.wSerial,
-                    data.wLoadOvp, data.wLoadUvp, data.wBatOvp, data.wBatOvB, data.wBatUvp, data.wBatUvB);
+                json_ProParam(msg, sizeof(msg), data);
                 Serial.println(msg);
                 syslog.log(LOG_INFO, msg);
                 // TODO mqtt.publish(topic, msg);
@@ -585,11 +640,33 @@ const char *main_page( const char *body ) {
         "  <meta http-equiv=\"expires\" content=\"5\">\n"
         " </head>\n"
         " <body>\n"
-        "  <h1>" PROGNAME " %8.8s v" VERSION "</h1>\n%s"
+        "  <h1>" PROGNAME " %8.8s v" VERSION "</h1>\n"
         "  <table><tr>\n"
-        "   <td><form action=\"json\">\n"
-        "    <input type=\"submit\" name=\"json\" value=\"JSON\" />\n"
+        "   <td><form action=\"on\" method=\"post\">\n"
+        "    <input type=\"submit\" name=\"on\" value=\"Load ON\" />\n"
         "   </form></td>\n"
+        "   <td><form action=\"toggle\" method=\"post\">\n"
+        "    <input type=\"submit\" name=\"toggle\" value=\"Toggle Load\" />\n"
+        "   </form></td>\n"
+        "   <td><form action=\"off\" method=\"post\">\n"
+        "    <input type=\"submit\" name=\"off\" value=\"Load OFF\" />\n"
+        "   </form></td>\n"
+        "  </tr></table>\n%s<div>"
+        "  <table>\n"
+        "   <tr><td>Information</td><td><a href=\"/json/Information\">JSON</a></td></tr>\n"
+        "   <tr><td>ChgSts</td><td><a href=\"/json/ChgSts\">JSON</a></td></tr>\n"
+        "   <tr><td>BatParam</td><td><a href=\"/json/BatParam\">JSON</a></td></tr>\n"
+        "   <tr><td>Log</td><td><a href=\"/json/Log\">JSON</a></td></tr>\n"
+        "   <tr><td>Parameters</td><td><a href=\"/json/Parameters\">JSON</a></td></tr>\n"
+        "   <tr><td>LoadParam</td><td><a href=\"/json/LoadParam\">JSON</a></td></tr>\n"
+        "   <tr><td>ProParam</td><td><a href=\"/json/ProParam\">JSON</a></td></tr>\n"
+        "   <tr><td>Post firmware image to</td><td><a href=\"/update\">/update</a></td></tr>\n"
+        "   <tr><td>Last start time</td><td>%s</td></tr>\n"
+        "   <tr><td>Last web update</td><td>%s</td></tr>\n"
+        "   <tr><td>Last influx update</td><td>%s</td></tr>\n"
+        "   <tr><td>Influx status</td><td>%d</td></tr>\n"
+        "  </table>\n"
+        "  <table><tr>\n"
         "   <td><form action=\"breathe\" method=\"post\">\n"
         "    <input type=\"submit\" name=\"breathe\" value=\"Breathe\" />\n"
         "   </form></td>\n"
@@ -597,11 +674,6 @@ const char *main_page( const char *body ) {
         "    <input type=\"submit\" name=\"reset\" value=\"Reset\" />\n"
         "   </form></td>\n"
         "  </tr></table>\n"
-        "  <div>Post firmware image to /update<div>\n"
-        "  <div>Last start time: %s<div>\n"
-        "  <div>Last web update: %s<div>\n"
-        "  <div>Last influx update: %s<div>\n"
-        "  <div>Influx status: %d<div>\n"
         " </body>\n"
         "</html>\n";
     static char page[sizeof(fmt) + 500] = "";
@@ -619,16 +691,73 @@ const char *main_page( const char *body ) {
 
 // Define web pages for update, reset or for event infos
 void setup_webserver() {
-    web_server.on("/json", []() {
-        // TODO one json page for each item
-        // TODO one form page for each item to view and change esmart3 settings
+    web_server.on("/toggle", HTTP_POST, []() {
+        bool on;
+        const char *msg = "Load unknown";
+        if (esmart3.getLoad(on)) {
+            on = !on;
+            if (esmart3.setLoad(on)) {
+                msg = on ? "Load on" : "Load off";
+            }
+        }
+        web_server.send(200, "text/html", main_page(msg)); 
+    });
 
-        // static char inf_time[30];
-        // strftime(inf_time, sizeof(inf_time), "%FT%T%Z", localtime(&post_time));
-        // uint32_t esp_id = ESP.getChipId();
-        // snprintf(msg, sizeof(msg), fmt, WiFi.getHostname(), esp_id, ads1256_id, start_time, inf_time,
+    web_server.on("/on", HTTP_POST, []() {
+        bool on;
+        const char *msg = "Load on";
+        if (!esmart3.getLoad(on) || !on) {
+            if (!esmart3.setLoad(true)) {
+                msg = "Load unknown";
+            }
+        }
+        web_server.send(200, "text/html", main_page(msg)); 
+    });
 
-        web_server.send(200, "application/json", jsonChgSts);
+    web_server.on("/off", HTTP_POST, []() {
+        bool on;
+        const char *msg = "Load off";
+        if (!esmart3.getLoad(on) || on) {
+            if (!esmart3.setLoad(false)) {
+                msg = "Load unknown";
+            }
+        }
+        web_server.send(200, "text/html", main_page(msg)); 
+    });
+
+    web_server.on("/json/Information", []() {
+        json_Information(msg, sizeof(msg), es3Information);
+        web_server.send(200, "application/json", msg);
+    });
+
+    web_server.on("/json/ChgSts", []() {
+        json_ChgSts(msg, sizeof(msg), es3ChgSts);
+        web_server.send(200, "application/json", msg);
+    });
+
+    web_server.on("/json/BatParam", []() {
+        json_BatParam(msg, sizeof(msg), es3BatParam);
+        web_server.send(200, "application/json", msg);
+    });
+
+    web_server.on("/json/Log", []() {
+        json_Log(msg, sizeof(msg), es3Log);
+        web_server.send(200, "application/json", msg);
+    });
+
+    web_server.on("/json/Parameters", []() {
+        json_Parameters(msg, sizeof(msg), es3Parameters);
+        web_server.send(200, "application/json", msg);
+    });
+
+    web_server.on("/json/LoadParam", []() {
+        json_LoadParam(msg, sizeof(msg), es3LoadParam);
+        web_server.send(200, "application/json", msg);
+    });
+
+    web_server.on("/json/ProParam", []() {
+        json_ProParam(msg, sizeof(msg), es3ProParam);
+        web_server.send(200, "application/json", msg);
     });
 
     // Call this page to reset the ESP
@@ -881,18 +1010,18 @@ void setup() {
 // Main loop
 void loop() {
     // TODO set/reset err_interval for breathing
-    handle_esmart3_information();
+    handle_es3Information();
     bool have_time = check_ntptime();
     if( es3Information.wSerial[0] ) {  // we have required esmart3 infos
         if (have_time && enabledBreathing) {
             handle_breathe();
         }
-        handle_esmart3_chgSts();
-        handle_esmart3_batParam();
-        handle_esmart3_log();
-        // handle_esmart3_parameters();
-        handle_esmart3_proParam();
-        handle_esmart3_loadParam();
+        handle_es3ChgSts();
+        handle_es3BatParam();
+        handle_es3Log();
+        handle_es3Parameters();
+        handle_es3ProParam();
+        handle_es3LoadParam();
         // ignoring TempParam and EngSave (for now?)
     }
     handle_load_button(handle_load_led());
