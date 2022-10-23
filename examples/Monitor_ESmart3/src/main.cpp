@@ -102,13 +102,14 @@ bool enabledBreathing = true;  // global flag to switch breathing animation on o
 WiFiUDP logUDP;
 Syslog syslog(logUDP, SYSLOG_PROTO_IETF);
 char msg[512];  // one buffer for all syslog and json messages
+char start_time[30];
 
 // eSmart3 device
 #include <esmart3.h>
 
 #define RS485_DIR_PIN 22  // != -1: Use pin for explicit DE/!RE
 
-ESmart3 esmart3(rs485);  // Serial port to communicate with RS485 adapter
+    ESmart3 esmart3(rs485);  // Serial port to communicate with RS485 adapter
 
 
 // Post data to InfluxDB
@@ -597,9 +598,10 @@ const char *main_page( const char *body ) {
         "   </form></td>\n"
         "  </tr></table>\n"
         "  <div>Post firmware image to /update<div>\n"
-        "  <div>Influx status: %d<div>\n"
-        "  <div>Last influx update: %s<div>\n"
+        "  <div>Last start time: %s<div>\n"
         "  <div>Last web update: %s<div>\n"
+        "  <div>Last influx update: %s<div>\n"
+        "  <div>Influx status: %d<div>\n"
         " </body>\n"
         "</html>\n";
     static char page[sizeof(fmt) + 500] = "";
@@ -609,7 +611,8 @@ const char *main_page( const char *body ) {
     strftime(curr_time, sizeof(curr_time), "%FT%T%Z", localtime(&now));
     strftime(influx_time, sizeof(influx_time), "%FT%T%Z", localtime(&post_time));
     snprintf(page, sizeof(page), fmt, (char *)es3Information.wSerial,
-        (char *)es3Information.wSerial, body, influx_status, influx_time, curr_time);
+        (char *)es3Information.wSerial, body, start_time, curr_time,
+        influx_time, influx_status);
     return page;
 }
 
@@ -740,15 +743,19 @@ bool handle_load_led() {
 }
 
 
-#if defined(ESP8266)
-
 // check ntp status
 // return true if time is valid
 bool check_ntptime() {
     static bool have_time = false;
 
-    ntp.update();
-    if (!have_time && ntp.isTimeSet()) {
+    #if defined(ESP32)
+        bool valid_time = time(0) > 1582230020;
+    #else
+        ntp.update();
+        bool valid_time = ntp.isTimeSet();
+    #endif
+
+    if (!have_time && valid_time) {
         have_time = true;
         time_t now = time(NULL);
         strftime(start_time, sizeof(start_time), "%FT%T%Z", localtime(&now));
@@ -757,8 +764,6 @@ bool check_ntptime() {
 
     return have_time;
 }
-
-#endif
 
 
 // Status led update
@@ -807,7 +812,7 @@ void setup() {
     pinMode(HEALTH_LED_PIN, OUTPUT);
     digitalWrite(HEALTH_LED_PIN, HEALTH_LED_ON);
 
-    Serial.begin(115200);
+    Serial.begin(BAUDRATE);
     Serial.println("\nStarting " PROGNAME " v" VERSION " " __DATE__ " " __TIME__);
 
     // Syslog setup
@@ -877,11 +882,7 @@ void setup() {
 void loop() {
     // TODO set/reset err_interval for breathing
     handle_esmart3_information();
-    #if defined(ESP8266)
-        bool have_time = check_ntptime();
-    #else
-        bool have_time = time(0) > 1666000000;
-    #endif
+    bool have_time = check_ntptime();
     if( es3Information.wSerial[0] ) {  // we have required esmart3 infos
         if (have_time && enabledBreathing) {
             handle_breathe();
