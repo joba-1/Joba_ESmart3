@@ -821,14 +821,21 @@ void handle_load_button( bool loadOn ) {
         }
         else if( debounceStatus == 0xffffffff && !pressed ) {
             pressed = true;
-            esmart3.setLoad(!loadOn);
-            if( !loadOn ) {
-                Serial.println("Load switched ON");
+            if (esmart3.setLoad(!loadOn)) {
+                if( !loadOn ) {
+                    Serial.println("Load switched ON");
+                }
+                else {
+                    Serial.println("Load switched OFF");
+                }
             }
             else {
-                Serial.println("Load switched OFF");
+                Serial.println("Load UNKNOWN");
             }
         }
+        // else if (debounceStatus) {
+        //     Serial.println(debounceStatus, HEX);
+        // }
     }
 }
 
