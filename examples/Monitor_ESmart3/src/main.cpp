@@ -140,10 +140,10 @@ bool postInflux(const char *line) {
 
 bool json_Information(char *json, size_t maxlen, ESmart3::Information_t data) {
     static const char jsonFmt[] =
-        "{\"Version\":" VERSION ",\"Serial\":\"%8.8s\",\"Information\":{"
-        "\"Model\":\"%16.16s\","
-        "\"Date\":\"%8.8s\","
-        "\"FirmWare\":\"%4.4s\"}}";
+        "{\"Version\":" VERSION ",\"Serial\":\"%.8s\",\"Information\":{"
+        "\"Model\":\"%.16s\","
+        "\"Date\":\"%.8s\","
+        "\"FirmWare\":\"%.4s\"}}";
 
     int len = snprintf(json, maxlen, jsonFmt, (char *)data.wSerial, 
         (char *)data.wModel, (char *)data.wDate, (char *)data.wFirmWare);
@@ -167,11 +167,11 @@ void handle_es3Information() {
             if (strncmp((const char *)data.wSerialID, (const char *)es3Information.wSerialID, sizeof(data.wSerialID))) {
                 // found a new/different eSmart3
                 static const char lineFmt[] =
-                    "Information,Serial=%8.8s,Version=" VERSION " "
+                    "Information,Serial=%.8s,Version=" VERSION " "
                     "Host=\"%s\","
-                    "Model=\"%16.16s\","
-                    "Date=\"%8.8s\","
-                    "FirmWare=\"%4.4s\"";
+                    "Model=\"%.16s\","
+                    "Date=\"%.8s\","
+                    "FirmWare=\"%.4s\"";
 
                 es3Information = data;
                 json_Information(msg, sizeof(msg), data);
@@ -193,7 +193,7 @@ void handle_es3Information() {
 
 bool json_ChgSts(char *json, size_t maxlen, ESmart3::ChgSts_t data) {
     static const char jsonFmt[] =
-        "{\"Version\":" VERSION ",\"Serial\":\"%8.8s\",\"ChgSts\":{"
+        "{\"Version\":" VERSION ",\"Serial\":\"%.8s\",\"ChgSts\":{"
         "\"ChgMode\":%u,"
         "\"PvVolt\":%u,"
         "\"BatVolt\":%u,"
@@ -237,7 +237,7 @@ void handle_es3ChgSts() {
             if( memcmp(&data, &es3ChgSts, sizeof(data) ) ) {
                 // values have changed: publish
                 static const char lineFmt[] =
-                    "ChgSts,Serial=%8.8s,Version=" VERSION " "
+                    "ChgSts,Serial=%.8s,Version=" VERSION " "
                     "Host=\"%s\","
                     "ChgMode=%u,"
                     "PvVolt=%u,"
@@ -279,7 +279,7 @@ void handle_es3ChgSts() {
 
 bool json_BatParam(char *json, size_t maxlen, ESmart3::BatParam_t data) {
     static const char jsonFmt[] =
-        "{\"Version\":" VERSION ",\"Serial\":\"%8.8s\",\"BatParam\":{"
+        "{\"Version\":" VERSION ",\"Serial\":\"%.8s\",\"BatParam\":{"
         "\"BatType\":%u,"
         "\"BatSysType\":%u,"
         "\"BulkVolt\":%u,"
@@ -313,7 +313,7 @@ void handle_es3BatParam() {
             if( memcmp(&data, &es3BatParam, sizeof(data) ) ) {
                 // values have changed: publish
                 static const char lineFmt[] =
-                    "BatParam,Serial=%8.8s,Version=" VERSION " "
+                    "BatParam,Serial=%.8s,Version=" VERSION " "
                     "Host=\"%s\","
                     "BatType=%u,"
                     "BatSysType=%u,"
@@ -345,7 +345,7 @@ void handle_es3BatParam() {
 
 bool json_Log(char *json, size_t maxlen, ESmart3::Log_t data) {
     static const char jsonFmt[] =
-        "{\"Version\":" VERSION ",\"Serial\":\"%8.8s\",\"Log\":{"
+        "{\"Version\":" VERSION ",\"Serial\":\"%.8s\",\"Log\":{"
         "\"RunTime\":%u,"
         "\"StartCnt\":%u,"
         "\"LastFaultInfo\":%u,"
@@ -386,7 +386,7 @@ void handle_es3Log() {
             if( memcmp(&data.wStartCnt, &es3Log.wStartCnt, sizeof(data) - offsetof(ESmart3::Log_t, wStartCnt) ) ) {
                 // values have changed: publish
                 static const char lineFmt[] =
-                    "Log,Serial=%8.8s,Version=" VERSION " "
+                    "Log,Serial=%.8s,Version=" VERSION " "
                     "Host=\"%s\","
                     "RunTime=%u,"
                     "StartCnt=%u,"
@@ -425,7 +425,7 @@ void handle_es3Log() {
 
 bool json_Parameters(char *json, size_t maxlen, ESmart3::Parameters_t data) {
     static const char jsonFmt[] =
-        "{\"Version\":" VERSION ",\"Serial\":\"%8.8s\",\"Parameters\":{"
+        "{\"Version\":" VERSION ",\"Serial\":\"%.8s\",\"Parameters\":{"
         "\"PvVoltRatio\":%u,"
         "\"PvVoltOffset\":%u,"
         "\"BatVoltRatio\":%u,"
@@ -463,7 +463,7 @@ void handle_es3Parameters() {
             if( memcmp(&data, &es3Parameters, sizeof(data)) ) {
                 // values have changed: publish
                 static const char lineFmt[] =
-                    "Parameters,Serial=%8.8s,Version=" VERSION " "
+                    "Parameters,Serial=%.8s,Version=" VERSION " "
                     "Host=\"%s\","
                     "PvVoltRatio=%u,"
                     "PvVoltOffset=%u,"
@@ -499,7 +499,7 @@ void handle_es3Parameters() {
 
 bool json_LoadParam(char *json, size_t maxlen, ESmart3::LoadParam_t data) {
     static const char jsonFmt[] =
-        "{\"Version\":" VERSION ",\"Serial\":\"%8.8s\",\"LoadParam\":{"
+        "{\"Version\":" VERSION ",\"Serial\":\"%.8s\",\"LoadParam\":{"
         "\"LoadModuleSelect1\":%u,"
         "\"LoadModuleSelect2\":%u,"
         "\"LoadOnPvVolt\":%u,"
@@ -538,7 +538,7 @@ void handle_es3LoadParam() {
             if( memcmp(&data, &es3LoadParam, sizeof(data) ) ) {
                 // values have changed: publish
                 static const char lineFmt[] =
-                    "LoadParam,Serial=%8.8s,Version=" VERSION " "
+                    "LoadParam,Serial=%.8s,Version=" VERSION " "
                     "Host=\"%s\","
                     "LoadModuleSelect1=%u,"
                     "LoadModuleSelect2=%u,"
@@ -575,7 +575,7 @@ void handle_es3LoadParam() {
 
 bool json_ProParam(char *json, size_t maxlen, ESmart3::ProParam_t data) {
     static const char jsonFmt[] =
-        "{\"Version\":" VERSION ",\"Serial\":\"%8.8s\",\"ProParam\":{"
+        "{\"Version\":" VERSION ",\"Serial\":\"%.8s\",\"ProParam\":{"
         "\"LoadOvp\":%u,"
         "\"LoadUvp\":%u,"
         "\"BatOvp\":%u,"
@@ -605,7 +605,7 @@ void handle_es3ProParam() {
             if( memcmp(&data, &es3ProParam, sizeof(data) ) ) {
                 // values have changed: publish
                 static const char lineFmt[] =
-                    "ProParam,Serial=%8.8s,Version=" VERSION " "
+                    "ProParam,Serial=%.8s,Version=" VERSION " "
                     "Host=\"%s\","
                     "LoadOvp=%u,"
                     "LoadUvp=%u,"
@@ -636,11 +636,11 @@ const char *main_page( const char *body ) {
     static const char fmt[] =
         "<html>\n"
         " <head>\n"
-        "  <title>" PROGNAME " %8.8s v" VERSION "</title>\n"
+        "  <title>" PROGNAME " %.8s v" VERSION "</title>\n"
         "  <meta http-equiv=\"expires\" content=\"5\">\n"
         " </head>\n"
         " <body>\n"
-        "  <h1>" PROGNAME " %8.8s v" VERSION "</h1>\n"
+        "  <h1>" PROGNAME " %.8s v" VERSION "</h1>\n"
         "  <p><table><tr>\n"
         "   <td><form action=\"on\" method=\"post\">\n"
         "    <input type=\"submit\" name=\"on\" value=\"Load ON\" />\n"

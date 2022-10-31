@@ -5,7 +5,7 @@
 
 // Debug
 
-void hex( const char *label, const uint8_t *data, size_t length ) {
+static void hex( const char *label, const uint8_t *data, size_t length ) {
     Serial.printf("%s:", label);
     while( length-- ) {
         Serial.printf(" %02x", *(data++));
