@@ -1,6 +1,6 @@
 {
   "name": "Joba_ESmart3",
-  "version": "3.1",
+  "version": "4.0",
   "description": "Talk to an ESmart3 MPPT solar charge controller over RS485",
   "keywords": "pv, solar, charge, battery, mppt, rs485",
   "repository":
