@@ -73,13 +73,21 @@ bool ESmart3::execute( header_t &header, uint8_t *command, uint8_t *result ) {
 }
 
 
+// "fix" eSmart3's view on 32bit values
+static uint32_t dwSwap( uint32_t &dw ) {
+    dw = dw >> 16 | dw << 16;
+    return dw;
+}
+
 // public Get-Commands
 
 bool ESmart3::getChgSts( ChgSts_t &data, size_t start, size_t end ) {
     uint8_t cmd[3];
     header_t header = { 0, MPPT, BROADCAST, GET, ChgSts, sizeof(cmd) };
     uint8_t *addr = initGetOffset(cmd, (uint8_t *)&data, start, end);
-    return execute(header, cmd, addr);
+    rc = execute(header, cmd, addr);
+    dwSwap(data.dwCO2);
+    return rc;
 }
 
 bool ESmart3::getBatParam( BatParam_t &data, size_t start, size_t end ) {
@@ -93,7 +101,14 @@ bool ESmart3::getLog( Log_t &data, size_t start, size_t end ) {
     uint8_t cmd[3];
     header_t header = { 0, MPPT, BROADCAST, GET, Log, sizeof(cmd) };
     uint8_t *addr = initGetOffset(cmd, (uint8_t *)&data, start, end);
-    return execute(header, cmd, addr);
+    bool rc = execute(header, cmd, addr);
+    dwSwap(data.dwTodayEng);
+    dwSwap(data.dwMonthEng);
+    dwSwap(data.dwTotalEng);
+    dwSwap(data.dwLoadTodayEng);
+    dwSwap(data.dwLoadMonthEng);
+    dwSwap(data.dwLoadTotalEng);
+    return rc;
 }
 
 bool ESmart3::getParameters( Parameters_t &data, size_t start, size_t end ) {
