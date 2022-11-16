@@ -85,7 +85,7 @@ bool ESmart3::getChgSts( ChgSts_t &data, size_t start, size_t end ) {
     uint8_t cmd[3];
     header_t header = { 0, MPPT, BROADCAST, GET, ChgSts, sizeof(cmd) };
     uint8_t *addr = initGetOffset(cmd, (uint8_t *)&data, start, end);
-    rc = execute(header, cmd, addr);
+    bool rc = execute(header, cmd, addr);
     dwSwap(data.dwCO2);
     return rc;
 }
