@@ -207,7 +207,7 @@ void handle_es3Information() {
                 json_Information(msg, sizeof(msg), data);
                 Serial.println(msg);
                 syslog.log(LOG_INFO, msg);
-                // TODO mqtt.publish(topic, msg);
+                publish(topic, msg);
                 snprintf(msg, sizeof(msg), lineFmt, (char *)data.wSerial,
                     WiFi.getHostname(), (char *)data.wModel,
                     (char *)data.wDate, (char *)data.wFirmWare);
@@ -289,7 +289,7 @@ void handle_es3ChgSts() {
                 json_ChgSts(msg, sizeof(msg), data);
                 Serial.println(msg);
                 syslog.log(LOG_INFO, msg);
-                // TODO mqtt.publish(topic, msg);
+                publish(topic, msg);
                 snprintf(msg, sizeof(msg), lineFmt, (char *)es3Information.wSerial, WiFi.getHostname(), 
                     data.wChgMode, data.wPvVolt, data.wBatVolt, data.wChgCurr, data.wOutVolt,
                     data.wLoadVolt, data.wLoadCurr, data.wChgPower, data.wLoadPower, data.wBatTemp, 
@@ -359,7 +359,7 @@ void handle_es3BatParam() {
                 json_BatParam(msg, sizeof(msg), data);
                 Serial.println(msg);
                 syslog.log(LOG_INFO, msg);
-                // TODO mqtt.publish(topic, msg);
+                publish(topic, msg);
                 snprintf(msg, sizeof(msg), lineFmt, (char *)es3Information.wSerial, WiFi.getHostname(), 
                     data.wBatType, data.wBatSysType, data.wBulkVolt, data.wFloatVolt, data.wMaxChgCurr,
                     data.wMaxDisChgCurr, data.wEqualizeChgVolt, data.wEqualizeChgTime, data.bLoadUseSel);
@@ -437,7 +437,7 @@ void handle_es3Log() {
                 json_Log(msg, sizeof(msg), data);
                 Serial.println(msg);
                 syslog.log(LOG_INFO, msg);
-                // TODO mqtt.publish(topic, msg);
+                publish(topic, msg);
                 snprintf(msg, sizeof(msg), lineFmt, (char *)es3Information.wSerial, WiFi.getHostname(), 
                     data.dwRunTime, data.wStartCnt, data.wLastFaultInfo, data.wFaultCnt, 
                     data.dwTodayEng, data.wTodayEngDate.month, data.wTodayEngDate.day, data.dwMonthEng, 
@@ -512,7 +512,7 @@ void handle_es3Parameters() {
                 json_Parameters(msg, sizeof(msg), data);
                 // Serial.println(msg);
                 // syslog.log(LOG_INFO, msg);
-                // TODO mqtt.publish(topic, msg);
+                publish(topic, msg);
                 snprintf(msg, sizeof(msg), lineFmt, (char *)es3Information.wSerial, WiFi.getHostname(), 
                     data.wPvVoltRatio, data.wPvVoltOffset, data.wBatVoltRatio, data.wBatVoltOffset, 
                     data.wChgCurrRatio, data.wChgCurrOffset, data.wLoadCurrRatio, data.wLoadCurrOffset, 
@@ -587,7 +587,7 @@ void handle_es3LoadParam() {
                 json_LoadParam(msg, sizeof(msg), data);
                 Serial.println(msg);
                 syslog.log(LOG_INFO, msg);
-                // TODO mqtt.publish(topic, msg);
+                publish(topic, msg);
                 snprintf(msg, sizeof(msg), lineFmt, (char *)es3Information.wSerial, WiFi.getHostname(), 
                     data.wLoadModuleSelect1, data.wLoadModuleSelect2, data.wLoadOnPvVolt, data.wLoadOffPvVolt, 
                     data.wPvContrlTurnOnDelay, data.wPvContrlTurnOffDelay, data.AftLoadOnTime.hour, data.AftLoadOnTime.minute, 
@@ -648,7 +648,7 @@ void handle_es3ProParam() {
                 json_ProParam(msg, sizeof(msg), data);
                 Serial.println(msg);
                 syslog.log(LOG_INFO, msg);
-                // TODO mqtt.publish(topic, msg);
+                publish(topic, msg);
                 snprintf(msg, sizeof(msg), lineFmt, (char *)es3Information.wSerial, WiFi.getHostname(), 
                     data.wLoadOvp, data.wLoadUvp, data.wBatOvp, data.wBatOvB, data.wBatUvp, data.wBatUvB);
                 postInflux(msg);
