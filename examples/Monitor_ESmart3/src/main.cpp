@@ -86,6 +86,14 @@ HTTPClient http;
 int influx_status = 0;
 time_t post_time = 0;
 
+// publish to mqtt broker
+#include <PubSubClient.h>
+
+WiFiClient wifiMqtt;
+PubSubClient mqtt(wifiMqtt);
+const char *mqtt_user = NULL;
+const char *mqtt_pass = NULL;
+
 // Breathing status LED
 const uint32_t ok_interval = 5000;
 const uint32_t err_interval = 1000;
@@ -110,6 +118,28 @@ char start_time[30];
 #define RS485_DIR_PIN 22  // != -1: Use pin for explicit DE/!RE
 
 ESmart3 esmart3(rs485);  // Serial port to communicate with RS485 adapter
+
+
+void slog(const char *message, uint16_t pri = LOG_INFO) {
+    static bool log_infos = true;
+    
+    if (pri < LOG_INFO || log_infos) {
+        Serial.println(message);
+        syslog.log(pri, message);
+    }
+
+    if (log_infos && millis() > 10 * 60 * 1000) {
+        log_infos = false;  // log infos only for first 10 minutes
+        slog("Switch off info level messages", LOG_NOTICE);
+    }
+}
+
+
+void publish( const char *topic, const char *payload ) {
+    if (mqtt.connected() && !mqtt.publish(topic, payload)) {
+        slog("Mqtt publish failed", LOG_ERR);
+    }
+}
 
 
 // Post data to InfluxDB
@@ -177,7 +207,7 @@ void handle_es3Information() {
                 json_Information(msg, sizeof(msg), data);
                 Serial.println(msg);
                 syslog.log(LOG_INFO, msg);
-                // TODO mqtt.publish(topic, msg);
+                publish(MQTT_TOPIC "/json/Information", msg);
                 snprintf(msg, sizeof(msg), lineFmt, (char *)data.wSerial,
                     WiFi.getHostname(), (char *)data.wModel,
                     (char *)data.wDate, (char *)data.wFirmWare);
@@ -259,7 +289,7 @@ void handle_es3ChgSts() {
                 json_ChgSts(msg, sizeof(msg), data);
                 Serial.println(msg);
                 syslog.log(LOG_INFO, msg);
-                // TODO mqtt.publish(topic, msg);
+                publish(MQTT_TOPIC "/json/ChgSts", msg);
                 snprintf(msg, sizeof(msg), lineFmt, (char *)es3Information.wSerial, WiFi.getHostname(), 
                     data.wChgMode, data.wPvVolt, data.wBatVolt, data.wChgCurr, data.wOutVolt,
                     data.wLoadVolt, data.wLoadCurr, data.wChgPower, data.wLoadPower, data.wBatTemp, 
@@ -329,7 +359,7 @@ void handle_es3BatParam() {
                 json_BatParam(msg, sizeof(msg), data);
                 Serial.println(msg);
                 syslog.log(LOG_INFO, msg);
-                // TODO mqtt.publish(topic, msg);
+                publish(MQTT_TOPIC "/json/BatParam", msg);
                 snprintf(msg, sizeof(msg), lineFmt, (char *)es3Information.wSerial, WiFi.getHostname(), 
                     data.wBatType, data.wBatSysType, data.wBulkVolt, data.wFloatVolt, data.wMaxChgCurr,
                     data.wMaxDisChgCurr, data.wEqualizeChgVolt, data.wEqualizeChgTime, data.bLoadUseSel);
@@ -407,7 +437,7 @@ void handle_es3Log() {
                 json_Log(msg, sizeof(msg), data);
                 Serial.println(msg);
                 syslog.log(LOG_INFO, msg);
-                // TODO mqtt.publish(topic, msg);
+                publish(MQTT_TOPIC "/json/Log", msg);
                 snprintf(msg, sizeof(msg), lineFmt, (char *)es3Information.wSerial, WiFi.getHostname(), 
                     data.dwRunTime, data.wStartCnt, data.wLastFaultInfo, data.wFaultCnt, 
                     data.dwTodayEng, data.wTodayEngDate.month, data.wTodayEngDate.day, data.dwMonthEng, 
@@ -482,7 +512,7 @@ void handle_es3Parameters() {
                 json_Parameters(msg, sizeof(msg), data);
                 // Serial.println(msg);
                 // syslog.log(LOG_INFO, msg);
-                // TODO mqtt.publish(topic, msg);
+                publish(MQTT_TOPIC "/json/Parameters", msg);
                 snprintf(msg, sizeof(msg), lineFmt, (char *)es3Information.wSerial, WiFi.getHostname(), 
                     data.wPvVoltRatio, data.wPvVoltOffset, data.wBatVoltRatio, data.wBatVoltOffset, 
                     data.wChgCurrRatio, data.wChgCurrOffset, data.wLoadCurrRatio, data.wLoadCurrOffset, 
@@ -557,7 +587,7 @@ void handle_es3LoadParam() {
                 json_LoadParam(msg, sizeof(msg), data);
                 Serial.println(msg);
                 syslog.log(LOG_INFO, msg);
-                // TODO mqtt.publish(topic, msg);
+                publish(MQTT_TOPIC "/json/LoadParam", msg);
                 snprintf(msg, sizeof(msg), lineFmt, (char *)es3Information.wSerial, WiFi.getHostname(), 
                     data.wLoadModuleSelect1, data.wLoadModuleSelect2, data.wLoadOnPvVolt, data.wLoadOffPvVolt, 
                     data.wPvContrlTurnOnDelay, data.wPvContrlTurnOffDelay, data.AftLoadOnTime.hour, data.AftLoadOnTime.minute, 
@@ -618,7 +648,7 @@ void handle_es3ProParam() {
                 json_ProParam(msg, sizeof(msg), data);
                 Serial.println(msg);
                 syslog.log(LOG_INFO, msg);
-                // TODO mqtt.publish(topic, msg);
+                publish(MQTT_TOPIC "/json/ProParam", msg);
                 snprintf(msg, sizeof(msg), lineFmt, (char *)es3Information.wSerial, WiFi.getHostname(), 
                     data.wLoadOvp, data.wLoadUvp, data.wBatOvp, data.wBatOvB, data.wBatUvp, data.wBatUvB);
                 postInflux(msg);
@@ -899,6 +929,9 @@ bool check_ntptime() {
         time_t now = time(NULL);
         strftime(start_time, sizeof(start_time), "%FT%T%Z", localtime(&now));
         syslog.logf(LOG_NOTICE, "Got valid time at %s", start_time);
+        if (mqtt.connected()) {
+            publish(MQTT_TOPIC "/status/StartTime", start_time);
+        }
     }
 
     return have_time;
@@ -939,6 +972,80 @@ void handle_breathe() {
         #endif
     }
 }
+
+
+void handle_es3Time( bool time_valid ) {
+    static bool time_set = false;
+
+    if( !time_set && time_valid ) {
+        struct tm now;
+        getLocalTime(&now);  // TODO: ESP32 only?
+        if (esmart3.setTime(now)) {
+            time_set = true;
+            slog("eSmart3 time set", LOG_NOTICE);
+        }
+    }
+}
+
+
+// Called on incoming mqtt messages
+void mqtt_callback(char* topic, byte* payload, unsigned int length) {
+
+    typedef struct cmd { const char *name; void (*action)(void); } cmd_t;
+    
+    static cmd_t cmds[] = { 
+        { "load on", [](){ esmart3.setLoad(true); } },
+        { "load off", [](){ esmart3.setLoad(false); } }
+    };
+
+    if (strcasecmp(MQTT_TOPIC "/cmd", topic) == 0) {
+        for (auto &cmd: cmds) {
+            if (strncasecmp(cmd.name, (char *)payload, length) == 0) {
+                snprintf(msg, sizeof(msg), "Execute mqtt command '%s'", cmd.name);
+                slog(msg, LOG_INFO);
+                (*cmd.action)();
+                return;
+            }
+        }
+    }
+
+    snprintf(msg, sizeof(msg), "Ignore mqtt %s: '%.*s'", topic, length, (char *)payload);
+    slog(msg, LOG_WARNING);
+}
+
+
+void handle_mqtt( bool time_valid ) {
+    static const int32_t interval = 5000;  // if disconnected try reconnect this often in ms
+    static uint32_t prev = -interval;      // first connect attempt without delay
+
+    if (mqtt.connected()) {
+        mqtt.loop();
+    }
+    else {
+        uint32_t now = millis();
+        if (now - prev > interval) {
+            if (mqtt.connect(HOSTNAME, mqtt_user, mqtt_pass, MQTT_TOPIC "/status/LWT", 0, true, "Offline")
+             && mqtt.publish(MQTT_TOPIC "/status/LWT", "Online", true)
+             && mqtt.publish(MQTT_TOPIC "/status/Hostname", HOSTNAME)
+             && mqtt.publish(MQTT_TOPIC "/status/DBServer", INFLUX_SERVER)
+             && mqtt.publish(MQTT_TOPIC "/status/DBPort", itoa(INFLUX_PORT, msg, 10))
+             && mqtt.publish(MQTT_TOPIC "/status/DBName", INFLUX_DB)
+             && mqtt.publish(MQTT_TOPIC "/status/Version", VERSION)
+             && (!time_valid || mqtt.publish(MQTT_TOPIC "/status/StartTime", start_time))
+             && mqtt.subscribe(MQTT_TOPIC "/cmd")) {
+                snprintf(msg, sizeof(msg), "Connected to MQTT broker %s:%d using topic %s", MQTT_SERVER, MQTT_PORT, MQTT_TOPIC);
+                slog(msg, LOG_NOTICE);
+            }
+            else {
+                int error = mqtt.state();
+                mqtt.disconnect();
+                snprintf(msg, sizeof(msg), "Connect to MQTT broker %s:%d failed with code %d", MQTT_SERVER, MQTT_PORT, error);
+                slog(msg, LOG_ERR);
+            }
+            prev = now;
+        }
+    }
+ }
 
 
 // Startup
@@ -995,6 +1102,15 @@ void setup() {
     esp_updater.setup(&web_server);
     setup_webserver();
 
+    mqtt.setServer(MQTT_SERVER, MQTT_PORT);
+    mqtt.setCallback(mqtt_callback);
+    #ifdef MQTT_USER
+    if( MQTT_USER[0] ) mqtt_user = MQTT_USER;
+    #endif
+    #ifdef MQTT_PASS
+    if( MQTT_PASS[0] ) mqtt_pass = MQTT_PASS;
+    #endif
+
 #if defined(ESP8266)
     rs485.begin(9600, SWSERIAL_8N1, 13, 15);  // Use pins 13 and 15 for RX and TX
     analogWriteRange(PWMRANGE);  // for health led breathing steps
@@ -1026,6 +1142,7 @@ void loop() {
         if (have_time && enabledBreathing) {
             handle_breathe();
         }
+        handle_es3Time(have_time);
         handle_es3ChgSts();
         handle_es3BatParam();
         handle_es3Log();
@@ -1036,4 +1153,5 @@ void loop() {
     }
     handle_load_button(handle_load_led());
     web_server.handleClient();
+    handle_mqtt(have_time);
 }

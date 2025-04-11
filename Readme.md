@@ -1,6 +1,7 @@
 # Joba_ESmart3
 
 A library to communicate with an eSmart3 MPPT solar charge controller or similar device via RS485.
+Works unchanged with an eSmart4 (might miss some features unknown to me since I have no docs)
 
 * See more on eSmart3 commands and wiring in include/esmart3.h
 * See usage in examples/ directory
